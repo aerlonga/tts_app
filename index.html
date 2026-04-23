@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GOINFRA · Gerador de Áudio</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161d;
+    --surface2: #1a1e28;
+    --border: #252a38;
+    --accent: #4f8ef7;
+    --accent-dim: #2a3f6b;
+    --green: #3ecf8e;
+    --red: #f76f6f;
+    --yellow: #f5c842;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 80px;
+  }
+
+  /* ─── Header ─── */
+  header {
+    width: 100%;
+    max-width: 780px;
+    margin-bottom: 48px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .logo-mark {
+    width: 44px; height: 44px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: grid; place-items: center;
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 500;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -.3px;
+  }
+  header p {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: var(--mono);
+    margin-top: 2px;
+  }
+
+  /* ─── Card ─── */
+  .card {
+    width: 100%;
+    max-width: 780px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .card-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .card-header .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .card-body { padding: 24px; }
+
+  /* ─── Form elements ─── */
+  label {
+    display: block;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    margin-bottom: 8px;
+  }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+
+  input[type="text"], input[type="password"], select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  select option { background: var(--surface2); }
+
+  .api-wrap { position: relative; margin-bottom: 20px; }
+  .api-wrap input { padding-right: 44px; }
+  .toggle-eye {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; color: var(--muted);
+    font-size: 16px; line-height: 1;
+  }
+  .toggle-eye:hover { color: var(--text); }
+
+  textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.7;
+    resize: vertical;
+    min-height: 260px;
+    outline: none;
+    transition: border-color .2s;
+    margin-bottom: 20px;
+  }
+  textarea:focus { border-color: var(--accent); }
+
+  .char-count {
+    text-align: right;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--muted);
+    margin-top: -14px;
+    margin-bottom: 20px;
+  }
+
+  /* ─── Button ─── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 14px 28px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .2s, transform .1s;
+    width: 100%;
+    justify-content: center;
+  }
+  .btn:hover { background: #6ba3ff; }
+  .btn:active { transform: scale(.99); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  .btn-icon { font-size: 18px; }
+
+  /* ─── Spinner ─── */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,.25);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── Status ─── */
+  .status {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: var(--mono);
+    display: none;
+  }
+  .status.error { background: rgba(247,111,111,.12); border: 1px solid var(--red); color: var(--red); }
+  .status.success { background: rgba(62,207,142,.1); border: 1px solid var(--green); color: var(--green); }
+  .status.loading { background: rgba(79,142,247,.1); border: 1px solid var(--accent); color: var(--accent); }
+
+  /* ─── Audio player ─── */
+  .audio-card { display: none; }
+  .audio-inner {
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .player-label {
+    font-size: 12px; font-family: var(--mono);
+    color: var(--green); text-transform: uppercase; letter-spacing: 1px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .player-label::before {
+    content: ''; display: block;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  audio {
+    width: 100%;
+    filter: invert(1) hue-rotate(180deg);
+    border-radius: 8px;
+    height: 40px;
+  }
+
+  .download-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid var(--green);
+    color: var(--green);
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .2s;
+    align-self: flex-start;
+  }
+  .download-btn:hover { background: rgba(62,207,142,.1); }
+
+  /* ─── Footer ─── */
+  footer {
+    margin-top: 48px;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 540px) {
+    .row2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">G</div>
+  <div>
+    <h1>GOINFRA · TTS Studio</h1>
+    <p>Gemini 2.5 Flash · Text-to-Speech</p>
+  </div>
+</header>
+
+<!-- Config card -->
+<div class="card">
+  <div class="card-header"><span class="dot"></span>Configuração</div>
+  <div class="card-body">
+    <div class="api-wrap">
+      <label>Gemini API Key</label>
+      <input type="password" id="apiKey" placeholder="AIza..." autocomplete="off">
+      <button class="toggle-eye" onclick="toggleKey()" title="Mostrar/ocultar">👁</button>
+    </div>
+
+    <div class="row2">
+      <div>
+        <label>Voz</label>
+        <select id="voice">
+          <option value="Charon">Charon — Profissional</option>
+          <option value="Kore">Kore — Firme</option>
+          <option value="Aoede">Aoede — Suave</option>
+          <option value="Puck">Puck — Expressivo</option>
+          <option value="Fenrir">Fenrir — Grave</option>
+          <option value="Leda">Leda — Clara</option>
+          <option value="Orus">Orus — Neutro</option>
+          <option value="Zephyr">Zephyr — Leve</option>
+        </select>
+      </div>
+      <div>
+        <label>Modelo</label>
+        <select id="model" disabled>
+          <option>gemini-2.5-flash-preview-tts</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Text card -->
+<div class="card">
+  <div class="card-header"><span class="dot"></span>Roteiro / Texto</div>
+  <div class="card-body">
+    <label>Conteúdo para narração</label>
+    <textarea id="textInput" placeholder="Cole aqui o seu roteiro ou texto para geração de áudio...">Roteiro Técnico: Portal de Atendimento GOINFRA
+(Tom: Calmo, profissional e instrutivo)
+
+[00:00 - Introdução]
+Olá! Este é o seu guia rápido para utilizar o Portal de Atendimento da GOINFRA. Nossa plataforma foi desenhada para que você resolva incidentes e faça solicitações de forma ágil e autônoma. Vamos ao passo a passo?
+
+[00:10 - Passo 1: Acesso]
+Para começar, acesse o link oficial do portal. Aqui vai a nossa Regra de Ouro: não utilize os campos comuns de login e senha. Clique sempre no botão Sign in with Microsoft e entre com seu e-mail institucional. Isso garante o acesso direto ao sistema.
+
+[00:25 - Passo 2: O Centro de Controle]
+Logado? Ótimo! Agora você está no seu Centro de Controle. Ele tem três rotas principais: Abrir Chamados, para novos serviços. Ajuda, sua base de conhecimento para dúvidas rápidas. E Meus Chamados, onde você acompanha o status do seu ticket em tempo real.
+
+[00:40 - Passo 3: Criando o Ticket]
+Ao abrir um chamado, você pode usar a barra de pesquisa para ser mais rápido. Ao preencher, atenção aos asteriscos: esses campos são obrigatórios. Dica: descreva o problema com detalhes e anexe prints do erro; isso ajuda nossa equipe a te atender muito mais rápido.
+
+[00:55 - Passo 4: Conclusão]
+Quando o técnico resolver o problema, você decide: se estiver tudo certo, clique em Finalizar Chamado. Se o erro persistir, use o caminho de reabrir o ticket com prioridade.
+
+[01:10 - Encerramento]
+Por fim, não esqueça de avaliar nosso atendimento na Pesquisa de Satisfação. Sua opinião calibra a qualidade do nosso serviço. Pronto! Agora você já sabe como navegar com eficiência. Até a próxima!</textarea>
+    <div class="char-count"><span id="charCount">0</span> caracteres</div>
+
+    <button class="btn" id="generateBtn" onclick="generate()">
+      <span class="btn-icon">🎙️</span>
+      <span id="btnText">Gerar Áudio</span>
+      <div class="spinner" id="spinner"></div>
+    </button>
+
+    <div class="status" id="status"></div>
+  </div>
+</div>
+
+<!-- Audio result card -->
+<div class="card audio-card" id="audioCard">
+  <div class="card-header"><span class="dot" style="background:var(--green)"></span>Áudio Gerado</div>
+  <div class="card-body">
+    <div class="audio-inner">
+      <div class="player-label">Pronto para reprodução</div>
+      <audio id="audioPlayer" controls></audio>
+      <a class="download-btn" id="downloadLink" download="goinfra_audio.wav">
+        ⬇ Baixar WAV
+      </a>
+    </div>
+  </div>
+</div>
+
+<footer>GOINFRA TTS · Powered by Gemini 2.5 Flash · localhost:5000</footer>
+
+<script>
+  const textarea = document.getElementById('textInput');
+  const charCount = document.getElementById('charCount');
+
+  function updateCount() {
+    charCount.textContent = textarea.value.length.toLocaleString('pt-BR');
+  }
+  textarea.addEventListener('input', updateCount);
+  updateCount();
+
+  function toggleKey() {
+    const inp = document.getElementById('apiKey');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  }
+
+  function setStatus(msg, type) {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = 'status ' + type;
+    el.style.display = 'block';
+  }
+
+  function setLoading(loading) {
+    const btn = document.getElementById('generateBtn');
+    const spinner = document.getElementById('spinner');
+    const btnText = document.getElementById('btnText');
+    btn.disabled = loading;
+    spinner.style.display = loading ? 'block' : 'none';
+    btnText.textContent = loading ? 'Gerando áudio...' : 'Gerar Áudio';
+  }
+
+  async function generate() {
+    const apiKey = document.getElementById('apiKey').value.trim();
+    const text = textarea.value.trim();
+    const voice = document.getElementById('voice').value;
+
+    if (!apiKey) { setStatus('⚠ Insira sua Gemini API Key antes de continuar.', 'error'); return; }
+    if (!text) { setStatus('⚠ O texto não pode estar vazio.', 'error'); return; }
+
+    setLoading(true);
+    setStatus('⏳ Enviando para o Gemini... isso pode levar alguns segundos.', 'loading');
+    document.getElementById('audioCard').style.display = 'none';
+
+    try {
+      const res = await fetch('/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: apiKey, text, voice })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro desconhecido');
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+
+      document.getElementById('audioPlayer').src = url;
+      document.getElementById('downloadLink').href = url;
+      document.getElementById('audioCard').style.display = 'block';
+      document.getElementById('audioCard').scrollIntoView({ behavior: 'smooth' });
+
+      setStatus('✅ Áudio gerado com sucesso!', 'success');
+    } catch (e) {
+      setStatus('❌ Erro: ' + e.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+</script>
+</body>
+</html>
