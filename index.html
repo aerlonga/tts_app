@@ -518,7 +518,7 @@
       <div class="row2">
         <div>
           <label>Voz</label>
-          <select id="voice">
+          <!-- <select id="voice">
             <option value="Charon">Charon — Profissional</option>
             <option value="Kore">Kore — Firme</option>
             <option value="Aoede">Aoede — Suave</option>
@@ -527,12 +527,29 @@
             <option value="Leda">Leda — Clara</option>
             <option value="Orus">Orus — Neutro</option>
             <option value="Zephyr">Zephyr — Leve</option>
+            <option value="Dante">Dante — Narrador</option>
+            <option value="Eos">Eos — Enérgica</option>
+          </select> -->
+          <select id="voice">
+            <option value="charon">Charon — Profissional</option>
+            <option value="kore">Kore — Firme</option>
+            <option value="aoede">Aoede — Suave</option>
+            <option value="puck">Puck — Expressivo</option>
+            <option value="fenrir">Fenrir — Grave</option>
+            <option value="leda">Leda — Clara</option>
+            <option value="orus">Orus — Neutro</option>
+            <option value="zephyr">Zephyr — Leve</option>
+            <option value="alnilam">Alnilam (Nova)</option>
+            <option value="enceladus">Enceladus (Nova) testar essa</option>
+            <option value="gacrux">Gacrux (Nova)</option>
+            <option value="umbriel">Umbriel (Nova)</option>
+            <option value="schedar">Schedar (Nova)</option>
           </select>
         </div>
         <div>
           <label>Modelo</label>
           <select id="model" disabled>
-            <option>gemini-2.5-flash-preview-tts</option>
+            <option>gemini</option>
           </select>
         </div>
       </div>
@@ -702,6 +719,7 @@ Por fim, não esqueça de avaliar nosso atendimento na Pesquisa de Satisfação.
 
         document.getElementById('audioPlayer').src = url;
         document.getElementById('downloadLink').href = url;
+        document.getElementById('downloadLink').download = `audio_${voice}.wav`;
         document.getElementById('audioCard').style.display = 'block';
         document.getElementById('audioCard').scrollIntoView({ behavior: 'smooth' });
 

@@ -41,6 +41,7 @@ def enhance():
         client = genai.Client(api_key=api_key)
         response = client.models.generate_content(
             model="gemini-2.5-flash",
+            # model="gemini-3-flash-preview",
             contents=text,
             config=types.GenerateContentConfig(
                 system_instruction=ENHANCE_SYSTEM_PROMPT,
@@ -68,7 +69,9 @@ def generate():
     try:
         client = genai.Client(api_key=api_key)
         response = client.models.generate_content(
-            model="gemini-2.5-flash-preview-tts",
+            # model="gemini-2.5-flash-preview-tts",
+            # model="gemini-3.1-flash-tts-preview",
+            model="gemini-2.5-pro-preview-tts",
             contents=text,
             config=types.GenerateContentConfig(
                 response_modalities=["AUDIO"],
