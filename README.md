@@ -73,4 +73,3 @@ tts_app/
 
 - O áudio é gerado em formato **WAV (24kHz mono)**
 - Textos longos podem levar **5–15 segundos** para processar
-- A API Key nunca sai da sua máquina local
