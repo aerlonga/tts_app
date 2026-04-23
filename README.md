@@ -1,4 +1,4 @@
-# 🎙️ GOINFRA TTS Studio
+# 🎙️ TTS Studio
 
 Gerador de áudio local usando **Gemini 2.5 Flash TTS** da Google.
 
