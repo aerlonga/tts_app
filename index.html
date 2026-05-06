@@ -505,6 +505,39 @@
     </div>
   </header>
 
+  <!-- URL Scriptifier Card -->
+  <div class="card" id="scriptifierCard">
+    <div class="card-header">
+      <span class="dot" style="background:var(--yellow)"></span>
+      Roteirizar a partir de URL
+    </div>
+    <div class="card-body">
+      <label>URL do artigo (Wikipedia, blog, notícia)</label>
+      <div style="display:flex; gap:10px; margin-bottom:12px;">
+        <input type="text" id="sourceUrl" placeholder="https://en.wikipedia.org/wiki/..."
+               style="flex:1; margin-bottom:0;">
+        <button class="btn" id="scriptifyBtn" onclick="scriptify()"
+                style="width:auto; padding:12px 20px; white-space:nowrap; background:var(--yellow); color:#000;">
+          ✨ Roteirizar
+        </button>
+      </div>
+      <div class="status" id="scriptifyStatus"></div>
+
+      <!-- Image prompts result -->
+      <div id="imagePromptsWrap" style="display:none; margin-top:16px;">
+        <label>Prompts de Imagem Gerados (copie para o Gemini Web)</label>
+        <div id="imagePromptsList" style="background:var(--surface2); border-radius:8px;
+             padding:14px; font-size:12px; font-family:var(--mono); line-height:2;
+             max-height:200px; overflow-y:auto; color:var(--muted);"></div>
+        <button onclick="copyPrompts()" style="margin-top:8px; background:transparent;
+                border:1px solid var(--yellow); color:var(--yellow); border-radius:6px;
+                padding:8px 16px; font-family:var(--mono); font-size:12px; cursor:pointer;">
+          📋 Copiar todos os prompts
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Config card -->
   <div class="card">
     <div class="card-header"><span class="dot"></span>Configuração</div>
@@ -602,6 +635,22 @@
         <div class="spinner" id="spinner"></div>
       </button>
 
+      <!-- Progress bar — hidden by default -->
+      <div id="progressWrap" style="display:none; margin-top: 16px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span id="progressLabel" style="font-size:12px; font-family:var(--mono); color:var(--muted);">
+            Processando chunk 0/0...
+          </span>
+          <span id="progressPct" style="font-size:12px; font-family:var(--mono); color:var(--accent);">0%</span>
+        </div>
+        <div style="background:var(--surface2); border-radius:4px; height:6px; overflow:hidden;">
+          <div id="progressBar" style="height:100%; width:0%; background:var(--accent);
+               border-radius:4px; transition:width 0.3s ease;"></div>
+        </div>
+        <div id="progressPreview" style="margin-top:8px; font-size:11px; font-family:var(--mono);
+             color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+      </div>
+
       <div class="status" id="status"></div>
     </div>
   </div>
@@ -625,6 +674,44 @@
         <audio id="audioPlayer" controls></audio>
         <a class="download-btn" id="downloadLink" download="goinfra_audio.wav">
           ⬇ Baixar WAV
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Video Assembly Card -->
+  <div class="card" id="assemblyCard" style="display:none;">
+    <div class="card-header">
+      <span class="dot" style="background:var(--yellow)"></span>
+      Montar Vídeo (FFmpeg)
+    </div>
+    <div class="card-body">
+      <p style="font-size:13px; color:var(--muted); font-family:var(--mono);
+                margin-bottom:16px; line-height:1.6;">
+        Faça upload das imagens geradas (mín. 1, máx. 20). O sistema vai distribuí-las
+        igualmente pela duração do áudio com transições de fade.
+      </p>
+
+      <label>Imagens (JPG ou PNG, em ordem)</label>
+      <input type="file" id="imageFiles" accept="image/jpeg,image/png" multiple
+             style="width:100%; background:var(--surface2); border:1px solid var(--border);
+                    border-radius:8px; padding:12px; color:var(--text);
+                    font-family:var(--mono); font-size:13px; margin-bottom:16px; cursor:pointer;">
+
+      <div id="imagePreviewList" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;"></div>
+
+      <button class="btn" id="assembleBtn" onclick="assembleVideo()" style="background:var(--yellow); color:#000;">
+        🎬 Montar Vídeo
+        <div class="spinner" id="assembleSpinner" style="border-top-color:#000;"></div>
+      </button>
+
+      <div class="status" id="assemblyStatus"></div>
+
+      <!-- Download de vídeo -->
+      <div id="videoResult" style="display:none; margin-top:16px;">
+        <a id="videoDownloadLink" class="download-btn"
+           style="border-color:var(--yellow); color:var(--yellow);" download="video.mp4">
+          ⬇ Baixar MP4
         </a>
       </div>
     </div>
@@ -667,6 +754,88 @@
       return text.replace(/\(([^)]{2,60})\)/g, '<mark>($1)</mark>');
     }
 
+    // ── Phase 1: SSE progress helpers ──────────────────────────────────────
+    function showProgress(show) {
+      document.getElementById('progressWrap').style.display = show ? 'block' : 'none';
+    }
+
+    function updateProgress(current, total, preview) {
+      const pct = Math.round((current / total) * 100);
+      document.getElementById('progressLabel').textContent = `Processando chunk ${current}/${total}...`;
+      document.getElementById('progressBar').style.width = pct + '%';
+      document.getElementById('progressPct').textContent = pct + '%';
+      document.getElementById('progressPreview').textContent = preview || '';
+    }
+
+    // ── Phase 3: audio blob storage ────────────────────────────────────────
+    let currentAudioBlob = null;
+
+    function showAudioResult(blob, voice) {
+      currentAudioBlob = blob;
+      const url = URL.createObjectURL(blob);
+      document.getElementById('audioPlayer').src = url;
+      document.getElementById('downloadLink').href = url;
+      document.getElementById('downloadLink').download = `audio_${voice}.wav`;
+      document.getElementById('audioCard').style.display = 'block';
+      document.getElementById('assemblyCard').style.display = 'block';
+      document.getElementById('audioCard').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // ── Phase 1: streaming TTS ─────────────────────────────────────────────
+    async function generateWithStream(apiKey, text, voice) {
+      showProgress(true);
+      updateProgress(0, 1, '');
+
+      const res = await fetch('/generate-stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: apiKey, text, voice })
+      });
+
+      if (!res.ok) {
+        showProgress(false);
+        const err = await res.json();
+        throw new Error(err.error || 'Erro no stream');
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // keep incomplete line
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data:')) continue;
+          const jsonStr = trimmed.slice(5).trim();
+          let evt;
+          try { evt = JSON.parse(jsonStr); } catch { continue; }
+
+          if (evt.type === 'progress') {
+            setStatus(`Processando chunk ${evt.current}/${evt.total}...`, 'loading');
+            updateProgress(evt.current, evt.total, evt.preview);
+          } else if (evt.type === 'error') {
+            // Non-blocking warning
+            console.warn(`Chunk ${evt.chunk} falhou: ${evt.message}`);
+          } else if (evt.type === 'done') {
+            showProgress(false);
+            const wavBytes = Uint8Array.from(atob(evt.audio_b64), c => c.charCodeAt(0));
+            const blob = new Blob([wavBytes], { type: 'audio/wav' });
+            return blob;
+          }
+        }
+      }
+      showProgress(false);
+      throw new Error('Stream encerrado sem evento "done".');
+    }
+
+    // ── Main generate function ─────────────────────────────────────────────
     async function generate() {
       const apiKey = document.getElementById('apiKey').value.trim();
       const voice = document.getElementById('voice').value;
@@ -678,10 +847,12 @@
 
       setLoading(true);
       document.getElementById('audioCard').style.display = 'none';
+      document.getElementById('assemblyCard').style.display = 'none';
       document.getElementById('previewCard').style.display = 'none';
+      showProgress(false);
 
       try {
-        // Step 1 - enhance with intonation cues (optional)
+        // Step 1 - enhance
         if (useEnhance) {
           setStatus('Analisando roteiro e adicionando entonacao...', 'loading');
           const enhRes = await fetch('/enhance', {
@@ -696,39 +867,181 @@
           const enhData = await enhRes.json();
           text = enhData.enhanced_text;
 
-          // Show preview with highlighted cues
           const safe = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
           document.getElementById('previewBody').innerHTML = highlightCues(safe);
           document.getElementById('previewCard').style.display = 'block';
         }
 
-        // Step 2 - generate TTS
+        // Step 2 - TTS (stream para textos longos, direto para curtos)
         setStatus('Gerando audio com Gemini TTS...', 'loading');
-        const res = await fetch('/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ api_key: apiKey, text, voice })
-        });
+        let blob;
 
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error || 'Erro desconhecido');
+        if (text.length < 500) {
+          // Rota original para textos curtos
+          const res = await fetch('/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ api_key: apiKey, text, voice })
+          });
+          if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Erro'); }
+          blob = await res.blob();
+        } else {
+          blob = await generateWithStream(apiKey, text, voice);
         }
 
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-
-        document.getElementById('audioPlayer').src = url;
-        document.getElementById('downloadLink').href = url;
-        document.getElementById('downloadLink').download = `audio_${voice}.wav`;
-        document.getElementById('audioCard').style.display = 'block';
-        document.getElementById('audioCard').scrollIntoView({ behavior: 'smooth' });
-
+        showAudioResult(blob, voice);
         setStatus('Audio gerado com sucesso!', 'success');
       } catch (e) {
+        showProgress(false);
         setStatus('Erro: ' + e.message, 'error');
       } finally {
         setLoading(false);
+      }
+    }
+
+    // ── Phase 2: Scriptify ─────────────────────────────────────────────────
+    let generatedImagePrompts = [];
+
+    function setScriptifyStatus(msg, type) {
+      const el = document.getElementById('scriptifyStatus');
+      el.textContent = msg;
+      el.className = 'status ' + type;
+      el.style.display = msg ? 'block' : 'none';
+    }
+
+    async function scriptify() {
+      const apiKey = document.getElementById('apiKey').value.trim();
+      const url = document.getElementById('sourceUrl').value.trim();
+      const btn = document.getElementById('scriptifyBtn');
+
+      if (!apiKey) { setScriptifyStatus('Insira a API Key na seção de Configuração.', 'error'); return; }
+      if (!url) { setScriptifyStatus('Insira uma URL válida.', 'error'); return; }
+
+      btn.disabled = true;
+      setScriptifyStatus('Extraindo e roteirizando... (pode levar 30-60s)', 'loading');
+      document.getElementById('imagePromptsWrap').style.display = 'none';
+
+      try {
+        const res = await fetch('/scriptify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ api_key: apiKey, url })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erro desconhecido');
+
+        // Preencher textarea
+        textarea.value = data.script;
+        updateCount();
+
+        // Image prompts
+        generatedImagePrompts = data.image_prompts || [];
+        if (generatedImagePrompts.length > 0) {
+          const listEl = document.getElementById('imagePromptsList');
+          listEl.innerHTML = generatedImagePrompts
+            .map((p, i) => `<div>${i + 1}. ${p}</div>`)
+            .join('');
+          document.getElementById('imagePromptsWrap').style.display = 'block';
+        }
+
+        setScriptifyStatus(
+          `✓ Roteiro gerado! ${data.script.length.toLocaleString('pt-BR')} chars. Role para baixo e gere o áudio.`,
+          'success'
+        );
+      } catch (e) {
+        setScriptifyStatus('Erro: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function copyPrompts() {
+      const text = generatedImagePrompts.join('\n');
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        const original = btn.textContent;
+        btn.textContent = '✓ Copiado!';
+        setTimeout(() => { btn.textContent = original; }, 2000);
+      });
+    }
+
+    // ── Phase 3: Video Assembly ────────────────────────────────────────────
+    document.getElementById('imageFiles').addEventListener('change', function () {
+      const files = Array.from(this.files);
+      const previewList = document.getElementById('imagePreviewList');
+      previewList.innerHTML = '';
+
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          img.style.cssText = 'width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid var(--border);';
+          previewList.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      });
+
+      if (files.length > 0) {
+        const counter = document.createElement('div');
+        counter.style.cssText = 'width:100%;font-size:11px;font-family:var(--mono);color:var(--muted);margin-top:4px;';
+        counter.textContent = `${files.length} imagem(ns) selecionada(s)`;
+        previewList.appendChild(counter);
+      }
+    });
+
+    async function assembleVideo() {
+      const imageFilesInput = document.getElementById('imageFiles');
+      const btn = document.getElementById('assembleBtn');
+      const spinner = document.getElementById('assembleSpinner');
+      const statusEl = document.getElementById('assemblyStatus');
+
+      if (!currentAudioBlob) {
+        statusEl.textContent = 'Gere o áudio primeiro.';
+        statusEl.className = 'status error';
+        statusEl.style.display = 'block';
+        return;
+      }
+      if (!imageFilesInput.files.length) {
+        statusEl.textContent = 'Selecione pelo menos 1 imagem.';
+        statusEl.className = 'status error';
+        statusEl.style.display = 'block';
+        return;
+      }
+
+      btn.disabled = true;
+      spinner.style.display = 'block';
+      statusEl.textContent = 'Montando vídeo... (pode demorar alguns minutos)';
+      statusEl.className = 'status loading';
+      statusEl.style.display = 'block';
+      document.getElementById('videoResult').style.display = 'none';
+
+      try {
+        const formData = new FormData();
+        formData.append('audio', currentAudioBlob, 'audio.wav');
+        Array.from(imageFilesInput.files).forEach(f => formData.append('images', f));
+
+        const res = await fetch('/assemble', { method: 'POST', body: formData });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Erro ao montar vídeo');
+        }
+
+        const videoBlob = await res.blob();
+        const videoUrl = URL.createObjectURL(videoBlob);
+        const link = document.getElementById('videoDownloadLink');
+        link.href = videoUrl;
+        document.getElementById('videoResult').style.display = 'block';
+
+        statusEl.textContent = '✓ Vídeo montado com sucesso!';
+        statusEl.className = 'status success';
+      } catch (e) {
+        statusEl.textContent = 'Erro: ' + e.message;
+        statusEl.className = 'status error';
+      } finally {
+        btn.disabled = false;
+        spinner.style.display = 'none';
       }
     }
   </script>
