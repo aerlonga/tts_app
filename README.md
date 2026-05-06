@@ -33,7 +33,9 @@ Uma **Gemini API Key** pode ser obtida em → https://aistudio.google.com/app/ap
 
 ### Iniciar o servidor
 ```bash
-python app.py
+source .venv/bin/activate
+
+python3 app.py
 ```
 Abra no navegador: `http://localhost:5000`
 

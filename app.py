@@ -30,17 +30,18 @@ FFMPEG_AVAILABLE = check_ffmpeg()
 
 # ─── System Prompts ──────────────────────────────────────────────────────────
 
-ENHANCE_SYSTEM_PROMPT = """Voce e um diretor de locucao profissional.
-Sua tarefa e receber um roteiro em texto puro e reescrevê-lo com marcacoes de entonacao naturais em linguagem natural,
-inseridas INLINE dentro do texto, entre parenteses.
+ENHANCE_SYSTEM_PROMPT = """You are a professional voiceover director.
+Your task is to receive a raw text script and rewrite it with natural intonation markup in natural language,
+inserted INLINE within the text, in parentheses.
 
-Regras:
-- Use marcacoes como: (com entusiasmo), (pausa curta), (pausa longa), (enfatizando), (tom calmo), (tom serio),
-  (com curiosidade), (acelerando levemente), (desacelerando), (com energia), (suavemente), etc.
-- Coloque a marcacao imediatamente ANTES da frase ou palavra que deve receber aquela entonacao.
-- Nao invente conteudo, nao altere o texto original alem das marcacoes.
-- Nao adicione comentarios, explicacoes ou blocos de codigo. Retorne apenas o roteiro anotado.
-- Mantenha timestamps e estrutura do roteiro intactos.
+Rules:
+- Use markup such as: (with enthusiasm), (short pause), (long pause), (emphasizing), (calm tone), (serious tone),
+  (with curiosity), (slightly speeding up), (slowing down), (with energy), (softly), etc.
+- Place the markup immediately BEFORE the sentence or word that should receive that intonation.
+- Do not invent content, do not alter the original text other than adding the markup.
+- Do not add comments, explanations, or code blocks. Return only the annotated script.
+- Keep timestamps and script structure intact.
+- The output MUST be in English.
 """
 
 SCRIPTIFY_SYSTEM_PROMPT = """You are a professional scriptwriter for an American YouTube channel focused on military history, dark historical events, and geopolitical conflicts, targeting American veterans and history enthusiasts aged 35-65.
@@ -73,7 +74,7 @@ OUTPUT FORMAT:
 
 # ─── Chunking ─────────────────────────────────────────────────────────────────
 
-def chunk_text(text: str, max_chars: int = 600) -> list[str]:
+def chunk_text(text: str, max_chars: int = 3000) -> list[str]:
     """Divide o texto em chunks adequados para a API TTS."""
     paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
     chunks = []
@@ -271,6 +272,7 @@ def generate():
             config=types.GenerateContentConfig(
                 response_modalities=["AUDIO"],
                 speech_config=types.SpeechConfig(
+                    language_code="en-US",
                     voice_config=types.VoiceConfig(
                         prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice)
                     )
@@ -326,11 +328,13 @@ def generate_stream():
 
             try:
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash-preview-tts",
+                    # model="gemini-2.5-flash-preview-tts",
+                    model="gemini-3.1-flash-tts-preview",
                     contents=chunk,
                     config=types.GenerateContentConfig(
                         response_modalities=["AUDIO"],
                         speech_config=types.SpeechConfig(
+                            language_code="en-US",
                             voice_config=types.VoiceConfig(
                                 prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice)
                             )
@@ -417,24 +421,37 @@ def scriptify():
 
         full_response = response.text.strip()
 
-        # Separar script dos image prompts
+        import re
+        script_part = full_response
+        image_raw = full_response
+        image_prompts = []
+
         if "===IMAGE_PROMPTS===" in full_response:
             parts = full_response.split("===IMAGE_PROMPTS===", 1)
             script_part = parts[0].strip()
             image_raw = parts[1].strip()
-            try:
-                # Tenta extrair o array JSON
-                start = image_raw.find('[')
-                end = image_raw.rfind(']') + 1
-                if start != -1 and end > start:
-                    image_prompts = json.loads(image_raw[start:end])
-                else:
-                    image_prompts = []
-            except Exception:
-                image_prompts = []
-        else:
-            script_part = full_response
-            image_prompts = []
+
+        try:
+            # Procura o array JSON
+            start = image_raw.find('[')
+            end = image_raw.rfind(']') + 1
+            if start != -1 and end > start:
+                json_str = image_raw[start:end]
+                # Cleanup common JSON errors from LLMs
+                json_str = re.sub(r',\s*]', ']', json_str) # Remove trailing commas
+                
+                try:
+                    image_prompts = json.loads(json_str)
+                    
+                    # Se usou o fallback (sem marcador), limpa o script_part
+                    if "===IMAGE_PROMPTS===" not in full_response:
+                        script_part = full_response[:full_response.rfind('[')].strip()
+                        
+                except json.JSONDecodeError as e:
+                    print(f"[WARN] Falha no JSON.loads: {e}")
+                    print(f"[WARN] Conteudo problematico: {json_str}")
+        except Exception as e:
+            print(f"[WARN] Erro ao extrair blocos de imagem: {e}")
 
         return jsonify({
             "script": script_part,
