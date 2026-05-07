@@ -341,21 +341,42 @@ def search_broll(keywords: list[str], collection: str = "prelinger") -> list[dic
 
     results = []
     for d in docs:
+        identifier = d["identifier"]
         license_url = d.get("licenseurl", "")
         is_public_domain = "publicdomain" in license_url.lower()
-        # All items in safe collections are public domain by definition
         is_safe = collection in SAFE_COLLECTIONS or is_public_domain
 
         if not is_safe:
             continue
 
-        results.append({
-            "title": d.get("title", ""),
-            "identifier": d["identifier"],
-            "license": license_url or "public domain (collection)",
-            "download_url": f"https://archive.org/download/{d['identifier']}",
-            "thumb": f"https://archive.org/services/img/{d['identifier']}",
-        })
+        # Fetch metadata to find the actual MP4 file
+        try:
+            meta_url = f"https://archive.org/metadata/{identifier}"
+            meta_r = http_requests.get(meta_url, timeout=5)
+            meta_data = meta_r.json()
+            
+            # Find the best MP4 file (prefer original or high quality)
+            files = meta_data.get("files", [])
+            mp4_files = [f for f in files if f.get("name", "").lower().endswith(".mp4")]
+            
+            if not mp4_files:
+                continue # No MP4 found for this movie item
+
+            # Pick the largest MP4 (usually the highest quality)
+            best_file = max(mp4_files, key=lambda f: int(f.get("size", 0)))
+            filename = best_file["name"]
+            
+            results.append({
+                "title": d.get("title", ""),
+                "identifier": identifier,
+                "license": license_url or "public domain (collection)",
+                "download_url": f"https://archive.org/download/{identifier}/{filename}",
+                "thumb": f"https://archive.org/services/img/{identifier}",
+                "preview_url": f"https://archive.org/embed/{identifier}?autoplay=1",
+            })
+        except Exception as e:
+            print(f"[WARN] Error fetching metadata for {identifier}: {e}")
+            continue
 
     return results[:10]
 
@@ -688,14 +709,44 @@ def assemble():
     audio_path = os.path.join(job_dir, f"audio_{job_id}.wav")
     audio_file.save(audio_path)
 
-    # Save assets in order
+    # Parse manifest if provided (for mixed server/upload assets)
+    manifest_str = request.form.get("manifest", "[]")
+    try:
+        manifest = json.loads(manifest_str)
+    except Exception:
+        manifest = []
+
     asset_paths = []
-    for i, f in enumerate(image_files):
-        fname = f.filename or f"asset_{i}"
-        ext = os.path.splitext(fname)[1].lower() or ".jpg"
-        asset_path = os.path.join(job_dir, f"asset_{i:04d}{ext}")
-        f.save(asset_path)
-        asset_paths.append(asset_path)
+    
+    if manifest:
+        # Use manifest for ordering
+        uploaded_files = {f.filename: f for f in image_files if f.filename}
+        for item in manifest:
+            if item.get("type") == "upload":
+                fname = item.get("filename")
+                if fname in uploaded_files:
+                    f = uploaded_files[fname]
+                    ext = os.path.splitext(fname)[1].lower() or ".jpg"
+                    path = os.path.join(job_dir, f"asset_{len(asset_paths):04d}{ext}")
+                    f.save(path)
+                    asset_paths.append(path)
+            elif item.get("type") == "server":
+                # Ensure it's a safe path (e.g., inside /tmp/broll)
+                srv_path = item.get("path")
+                if srv_path and srv_path.startswith("/tmp/broll/") and os.path.exists(srv_path):
+                    ext = os.path.splitext(srv_path)[1].lower() or ".mp4"
+                    path = os.path.join(job_dir, f"asset_{len(asset_paths):04d}{ext}")
+                    # Copiamos ou linkamos. Copiar é mais seguro.
+                    shutil.copy2(srv_path, path)
+                    asset_paths.append(path)
+    else:
+        # Fallback: apenas arquivos anexados (comportamento antigo)
+        for i, f in enumerate(image_files):
+            fname = f.filename or f"asset_{i}"
+            ext = os.path.splitext(fname)[1].lower() or ".jpg"
+            path = os.path.join(job_dir, f"asset_{len(asset_paths):04d}{ext}")
+            f.save(path)
+            asset_paths.append(path)
 
     output_path = os.path.join(job_dir, f"video_{job_id}.mp4")
 

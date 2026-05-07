@@ -1231,6 +1231,16 @@ audio, video {
 
 </main>
 
+<!-- ─── PREVIEW MODAL ─── -->
+<div id="previewModal" class="modal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.9); align-items:center; justify-content:center;">
+  <div style="position:relative; width:80%; max-width:800px; background:#000; border:1px solid var(--border);">
+    <button onclick="closePreview()" style="position:absolute; right:-40px; top:-40px; background:none; border:none; color:#fff; font-size:30px; cursor:pointer;">&times;</button>
+    <div style="padding-top:56.25%; position:relative;">
+      <iframe id="previewIframe" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;" allowfullscreen></iframe>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════════════
      JAVASCRIPT
 ═══════════════════════════════════════════ -->
@@ -1646,13 +1656,19 @@ async function searchBroll() {
     const clips = data.clips || [];
     document.getElementById('brollCount').textContent = `${clips.length} clips`;
     document.getElementById('brollGrid').innerHTML = clips.map((c, i) => `
-      <div style="background:var(--bg2); border:1px solid var(--border2); border-radius:3px; overflow:hidden; cursor:pointer;"
-           onclick="this.classList.toggle('selected'); this.style.borderColor = this.classList.contains('selected') ? 'var(--amber)' : 'var(--border2)';"
-           data-broll-url="${escHtml(c.download_url)}" data-broll-title="${escHtml(c.title)}">
+      <div style="background:var(--bg2); border:1px solid var(--border2); border-radius:3px; overflow:hidden; cursor:pointer; position:relative;"
+           onclick="selectBroll('${escHtml(c.download_url)}', '${escHtml(c.title)}', this)"
+           title="Clique para fazer download e adicionar ao vídeo">
         <img src="${c.thumb}" alt="${escHtml(c.title)}" style="width:100%; height:100px; object-fit:cover; display:block;">
         <div style="padding:8px;">
           <div style="font-family:var(--mono); font-size:10px; color:var(--text); line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(c.title)}</div>
-          <div style="font-family:var(--mono); font-size:9px; color:var(--text3); margin-top:3px;">📋 ${escHtml(c.license).slice(0,30)}</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
+            <div style="font-family:var(--mono); font-size:9px; color:var(--text3);">📋 PD</div>
+            <button class="btn btn-ghost" style="font-size:9px; padding:2px 5px; height:auto; color:var(--amber);" 
+                    onclick="event.stopPropagation(); openPreview('${c.preview_url}')">
+              👁 Visualizar
+            </button>
+          </div>
         </div>
       </div>`).join('');
     document.getElementById('brollResults').style.display = clips.length ? 'block' : 'none';
@@ -1667,11 +1683,71 @@ async function searchBroll() {
   }
 }
 
+function openPreview(url) {
+  const modal = document.getElementById('previewModal');
+  const iframe = document.getElementById('previewIframe');
+  iframe.src = url;
+  modal.style.display = 'flex';
+}
+
+function closePreview() {
+  const modal = document.getElementById('previewModal');
+  const iframe = document.getElementById('previewIframe');
+  iframe.src = '';
+  modal.style.display = 'none';
+}
+
+async function selectBroll(url, title, el) {
+  if (el.classList.contains('selected')) return; // Already added
+  el.style.opacity = '0.5';
+  
+  showAlert('brollAlert', `Baixando vídeo: ${title.slice(0,30)}...`, 'loading');
+  try {
+    const res = await fetch('/broll/download', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro no download');
+    
+    // Add to unified asset list
+    state.selectedAssets.push({
+      type: 'server',
+      path: data.local_path,
+      name: title
+    });
+    
+    el.classList.add('selected');
+    el.style.opacity = '1';
+    el.style.borderColor = 'var(--amber)';
+    
+    updateAssetList();
+    showAlert('brollAlert', `✓ Vídeo adicionado: ${title.slice(0,30)}`, 'success');
+  } catch (e) {
+    el.style.opacity = '1';
+    showAlert('brollAlert', '✗ ' + e.message, 'error');
+  }
+}
+
 let selectedImageFiles = [];
 
 function onImageFiles(input) {
   const files = Array.from(input.files).slice(0, 50);
-  selectedImageFiles = files;
+  
+  // Clear previous uploads from unified list
+  state.selectedAssets = state.selectedAssets.filter(a => a.type !== 'upload');
+  
+  // Add new uploads
+  files.forEach(f => {
+    state.selectedAssets.push({
+      type: 'upload',
+      filename: f.name,
+      file: f,
+      name: f.name
+    });
+  });
+  
   document.getElementById('imgCount').textContent = `${files.length} / 50 imagens`;
 
   const label = document.getElementById('imgDropLabel');
@@ -1690,19 +1766,30 @@ function onImageFiles(input) {
   });
 
   updateAssetList();
-  document.getElementById('hint3').style.display = files.length ? 'block' : 'none';
-  if (files.length) {
+  document.getElementById('hint3').style.display = state.selectedAssets.length ? 'block' : 'none';
+  if (state.selectedAssets.length) {
     setBadge(3, 'done', 'PRONTO');
     document.getElementById('nav-3').classList.add('done');
   }
 }
 
 function updateAssetList() {
-  const count = selectedImageFiles.length;
-  document.getElementById('assetCount').textContent = `${count} assets`;
-  document.getElementById('assetList').innerHTML = selectedImageFiles.map((f, i) =>
-    `<div style="padding:3px 0;">${String(i+1).padStart(2,'0')}. 🖼 ${escHtml(f.name)}</div>`
-  ).join('');
+  const list = document.getElementById('assetList');
+  if (!state.selectedAssets.length) {
+    document.getElementById('assetCount').textContent = `0 assets`;
+    list.innerHTML = '';
+    return;
+  }
+  
+  document.getElementById('assetCount').textContent = `${state.selectedAssets.length} assets`;
+  list.innerHTML = state.selectedAssets.map((a, i) => {
+    const icon = a.type === 'upload' ? '🖼' : '🎬';
+    return `<div style="padding:3px 0;">${String(i+1).padStart(2,'0')}. ${icon} ${escHtml(a.name)}</div>`;
+  }).join('');
+  
+  document.getElementById('hint3').style.display = 'block';
+  setBadge(3, 'done', 'PRONTO');
+  document.getElementById('nav-3').classList.add('done');
 }
 
 /* ══════════════════════════════════════════
@@ -1728,8 +1815,8 @@ async function runAssemble() {
     return;
   }
 
-  if (!selectedImageFiles.length) {
-    showAlert('assembleAlert', '⚠ Adicione imagens na etapa Media Library.', 'error');
+  if (!state.selectedAssets.length) {
+    showAlert('assembleAlert', '⚠ Adicione imagens ou B-Rolls na etapa Media Library.', 'error');
     return;
   }
 
@@ -1742,7 +1829,18 @@ async function runAssemble() {
   try {
     const form = new FormData();
     form.append('audio', audioSource, audioSource.name);
-    selectedImageFiles.forEach(f => form.append('images', f, f.name));
+    
+    // Append actual files
+    const uploadAssets = state.selectedAssets.filter(a => a.type === 'upload');
+    uploadAssets.forEach(a => form.append('images', a.file, a.file.name));
+    
+    // Create manifest of order
+    const manifest = state.selectedAssets.map(a => ({
+      type: a.type,
+      filename: a.filename,
+      path: a.path
+    }));
+    form.append('manifest', JSON.stringify(manifest));
 
     const res = await fetch('/assemble', { method: 'POST', body: form });
     const data = await res.json();
