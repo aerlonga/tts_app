@@ -925,6 +925,10 @@ audio, video {
     </a>
     <a class="pipe-step" id="nav-3" href="#stage3" onclick="scrollToStage(3)">
       <span class="pipe-num">3</span>
+      <span>Media</span>
+    </a>
+    <a class="pipe-step" id="nav-4" href="#stage4" onclick="scrollToStage(4)">
+      <span class="pipe-num">4</span>
       <span>Vídeo</span>
     </a>
   </nav>
@@ -1077,7 +1081,7 @@ audio, video {
 
       <div id="hint2" style="display:none; margin-top:20px;">
         <button class="next-hint" onclick="activateStage(3)">
-          ✓ Áudio pronto — avançar para Montagem de Vídeo
+          ✓ Áudio pronto — avançar para Media Library
           <span>→</span>
         </button>
       </div>
@@ -1085,20 +1089,104 @@ audio, video {
     </div>
   </section>
 
-  <!-- ─── STAGE 3: VÍDEO ─── -->
+  <!-- ─── STAGE 3: MEDIA LIBRARY ─── -->
   <section class="stage" id="stage3">
     <div class="stage-header" onclick="toggleStage(3)">
       <div class="stage-number">03</div>
       <div class="stage-meta">
-        <div class="stage-title">MONTAGEM DE VÍDEO</div>
-        <div class="stage-desc">FFmpeg local · Slideshow com crossfade · Export MP4 1080p</div>
+        <div class="stage-title">MEDIA LIBRARY</div>
+        <div class="stage-desc">B-Roll archive.org · Upload de imagens · Assets mistos para vídeo</div>
       </div>
       <div class="stage-badge badge-pending" id="badge-3">AGUARDANDO</div>
     </div>
     <div class="stage-body">
 
-      <div class="row" style="margin-bottom:20px; align-items:flex-start;">
+      <!-- Tab switcher -->
+      <div style="display:flex; gap:0; margin-bottom:20px; border-bottom:1px solid var(--border);">
+        <button class="btn btn-ghost" id="tabBroll" onclick="switchMediaTab('broll')" style="border:none; border-bottom:2px solid var(--amber); border-radius:0; color:var(--amber);">
+          🎬 Buscar B-Roll
+        </button>
+        <button class="btn btn-ghost" id="tabImages" onclick="switchMediaTab('images')" style="border:none; border-bottom:2px solid transparent; border-radius:0;">
+          🖼 Minhas Imagens
+        </button>
+      </div>
 
+      <!-- Tab: B-Roll Search -->
+      <div id="brollTab">
+        <div class="row" style="margin-bottom:12px;">
+          <div class="field" style="flex:2;">
+            <div class="field-label"><span>Palavras-chave</span></div>
+            <input type="text" id="brollKeywords" placeholder="SR-71, Blackbird, Lockheed">
+          </div>
+          <div class="field" style="flex:1;">
+            <div class="field-label"><span>Coleção</span></div>
+            <select id="brollCollection">
+              <option value="prelinger">Prelinger Archives</option>
+              <option value="nasa">NASA</option>
+              <option value="national-archives">National Archives</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-secondary" id="brollSearchBtn" onclick="searchBroll()">
+          <div class="spin" id="brollSpin"></div>
+          🔍 Pesquisar
+        </button>
+        <div class="alert" id="brollAlert"></div>
+
+        <!-- B-Roll results grid -->
+        <div id="brollResults" style="display:none; margin-top:16px;">
+          <div class="field-label"><span>Resultados</span><small id="brollCount">0 clips</small></div>
+          <div id="brollGrid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:10px; margin-top:8px;"></div>
+        </div>
+      </div>
+
+      <!-- Tab: Image Upload -->
+      <div id="imagesTab" style="display:none;">
+        <div class="field">
+          <div class="field-label">
+            <span>Imagens (.jpg / .png)</span>
+            <small id="imgCount">0 / 50 imagens</small>
+          </div>
+          <div class="file-drop" id="imgDrop">
+            <input type="file" id="imageFiles" accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                   multiple onchange="onImageFiles(this)">
+            <div class="file-drop-label" id="imgDropLabel">
+              <strong>Clique</strong> ou arraste as imagens (máx 50)
+            </div>
+          </div>
+          <div class="image-previews" id="imagePreviews"></div>
+        </div>
+      </div>
+
+      <!-- Unified asset list -->
+      <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:16px;">
+        <div class="field-label"><span>Assets selecionados</span><small id="assetCount">0 assets</small></div>
+        <div id="assetList" style="margin-top:8px; font-family:var(--mono); font-size:11px; color:var(--text3);"></div>
+      </div>
+
+      <div id="hint3" style="display:none; margin-top:20px;">
+        <button class="next-hint" onclick="activateStage(4)">
+          ✓ Assets prontos — avançar para Montagem de Vídeo
+          <span>→</span>
+        </button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─── STAGE 4: VÍDEO ─── -->
+  <section class="stage" id="stage4">
+    <div class="stage-header" onclick="toggleStage(4)">
+      <div class="stage-number">04</div>
+      <div class="stage-meta">
+        <div class="stage-title">MONTAGEM DE VÍDEO</div>
+        <div class="stage-desc">FFmpeg · Ken Burns Two-Pass · NVENC GPU · Export MP4 1080p</div>
+      </div>
+      <div class="stage-badge badge-pending" id="badge-4">AGUARDANDO</div>
+    </div>
+    <div class="stage-body">
+
+      <div class="row" style="margin-bottom:20px; align-items:flex-start;">
         <!-- Audio file -->
         <div class="field" style="flex:1; min-width:220px;">
           <div class="field-label"><span>Arquivo de Áudio (.wav)</span></div>
@@ -1109,28 +1197,23 @@ audio, video {
             </div>
           </div>
         </div>
-
-        <!-- Images -->
-        <div class="field" style="flex:2; min-width:280px;">
-          <div class="field-label">
-            <span>Imagens (.jpg / .png)</span>
-            <small id="imgCount">0 / 20 imagens</small>
-          </div>
-          <div class="file-drop" id="imgDrop">
-            <input type="file" id="imageFiles" accept=".jpg,.jpeg,.png,image/jpeg,image/png"
-                   multiple onchange="onImageFiles(this)">
-            <div class="file-drop-label" id="imgDropLabel">
-              <strong>Clique</strong> ou arraste as imagens (máx 20)
-            </div>
-          </div>
-          <div class="image-previews" id="imagePreviews"></div>
-        </div>
       </div>
 
       <button class="btn btn-primary" id="assembleBtn" onclick="runAssemble()">
         <div class="spin" id="assembleSpin" style="border-color:rgba(0,0,0,.2); border-top-color:#000;"></div>
         🎬 Montar Vídeo
       </button>
+
+      <!-- Assembly progress -->
+      <div class="progress-wrap" id="assembleProgress">
+        <div class="progress-header">
+          <span class="progress-label" id="assembleProgressLabel">Aguardando...</span>
+          <span class="progress-pct" id="assembleProgressPct">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="assembleProgressFill"></div>
+        </div>
+      </div>
 
       <div class="alert" id="assembleAlert"></div>
 
@@ -1162,6 +1245,8 @@ const state = {
   audioBlob: null,
   selectedVoice: 'charon',
   imagePrompts: [],
+  sessionId: null,
+  selectedAssets: [],  // Files from Media Library for /assemble
 };
 
 /* ── Voices ── */
@@ -1199,11 +1284,11 @@ function selectVoice(id, el) {
 function activateStage(n) {
   state.activeStage = n;
 
-  for (let i = 1; i <= 3; i++) {
+  for (let i = 1; i <= 4; i++) {
     const sec = document.getElementById('stage' + i);
     const nav = document.getElementById('nav-' + i);
-    sec.classList.toggle('active-stage', i === n);
-    nav.classList.toggle('active', i === n);
+    if (sec) sec.classList.toggle('active-stage', i === n);
+    if (nav) nav.classList.toggle('active', i === n);
   }
 
   // Sync TTS textarea from script
@@ -1327,17 +1412,25 @@ async function runScriptify() {
 function renderPrompts(prompts) {
   if (!prompts.length) return;
   document.getElementById('promptCount').textContent = prompts.length;
-  document.getElementById('promptsList').innerHTML = prompts.map((p, i) => `
+  document.getElementById('promptsList').innerHTML = prompts.map((p, i) => {
+    const isObj = typeof p === 'object' && p.prompt;
+    const text = isObj ? p.prompt : p;
+    const ts = isObj && p.timestamp ? `<span style="color:var(--amber);">[${p.timestamp}]</span> ` : '';
+    const cue = isObj && p.cue ? `<span style="color:var(--text2);">${escHtml(p.cue)}</span> — ` : '';
+    return `
     <div class="prompt-item">
       <div class="prompt-num">${String(i + 1).padStart(2, '0')}</div>
-      <div class="prompt-text">${escHtml(p)}</div>
+      <div class="prompt-text">${ts}${cue}${escHtml(text)}</div>
       <button class="copy-prompt-btn" onclick="copyPrompt(this, ${i})">Copiar</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   document.getElementById('promptsPanel').classList.add('show');
 }
 
 function copyPrompt(btn, idx) {
-  navigator.clipboard.writeText(state.imagePrompts[idx]).then(() => {
+  const p = state.imagePrompts[idx];
+  const text = typeof p === 'object' && p.prompt ? p.prompt : p;
+  navigator.clipboard.writeText(text).then(() => {
     btn.textContent = '✓ Copiado';
     btn.classList.add('copied');
     setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 1800);
@@ -1346,7 +1439,8 @@ function copyPrompt(btn, idx) {
 
 function copyAllPrompts() {
   if (!state.imagePrompts.length) return;
-  navigator.clipboard.writeText(state.imagePrompts.join('\n\n')).then(() => {
+  const texts = state.imagePrompts.map(p => typeof p === 'object' && p.prompt ? p.prompt : p);
+  navigator.clipboard.writeText(texts.join('\n\n')).then(() => {
     const btn = document.querySelector('.prompts-header .btn');
     const orig = btn.textContent;
     btn.textContent = '✓ Copiados!';
@@ -1421,7 +1515,7 @@ async function runTTS() {
     const res = await fetch('/generate-stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ api_key: apiKey, text, voice: state.selectedVoice }),
+      body: JSON.stringify({ api_key: apiKey, text, voice: state.selectedVoice, session_id: state.sessionId }),
     });
 
     if (!res.ok) {
@@ -1449,7 +1543,16 @@ async function runTTS() {
         let evt;
         try { evt = JSON.parse(line); } catch { continue; }
 
-        if (evt.type === 'progress') {
+        if (evt.type === 'session') {
+          state.sessionId = evt.session_id;
+          addLog(`Sessão: ${evt.session_id.slice(0,8)}...`, 'ok');
+
+        } else if (evt.type === 'skipped') {
+          setProgress(evt.chunk, evt.total || evt.chunk,
+            `Chunk ${evt.chunk} recuperado do disco (skip)`);
+          addLog(`[${String(evt.chunk).padStart(2,'0')}] ✓ recuperado do cache`, 'ok');
+
+        } else if (evt.type === 'progress') {
           setProgress(evt.current, evt.total,
             `Processando chunk ${evt.current} de ${evt.total}...`);
           addLog(`[${String(evt.current).padStart(2,'0')}/${evt.total}] ${evt.preview || ''}...`, 'ok');
@@ -1459,6 +1562,7 @@ async function runTTS() {
 
         } else if (evt.type === 'done') {
           audiob64 = evt.audio_b64;
+          state.sessionId = null; // Reset on success
           setProgress(evt.chunks_processed || 1, evt.chunks_processed || 1, 'Finalizado!');
           addLog(`✓ ${evt.chunks_processed || 1} chunks processados`, 'ok');
         }
@@ -1494,30 +1598,87 @@ async function runTTS() {
 }
 
 /* ══════════════════════════════════════════
-   STAGE 3 — ASSEMBLE
+   STAGE 3 — MEDIA LIBRARY
 ══════════════════════════════════════════ */
-let selectedAudioFile  = null;
-let selectedImageFiles = [];
 
-function onAudioFile(input) {
-  selectedAudioFile = input.files[0] || null;
-  const label = document.getElementById('audioDropLabel');
-  label.innerHTML = selectedAudioFile
-    ? `<strong style="color:var(--green)">✓ ${escHtml(selectedAudioFile.name)}</strong>`
-    : '<strong>Clique</strong> ou arraste o .wav aqui';
+function switchMediaTab(tab) {
+  const brollTab = document.getElementById('brollTab');
+  const imagesTab = document.getElementById('imagesTab');
+  const tabBroll = document.getElementById('tabBroll');
+  const tabImages = document.getElementById('tabImages');
+
+  if (tab === 'broll') {
+    brollTab.style.display = 'block';
+    imagesTab.style.display = 'none';
+    tabBroll.style.borderBottomColor = 'var(--amber)';
+    tabBroll.style.color = 'var(--amber)';
+    tabImages.style.borderBottomColor = 'transparent';
+    tabImages.style.color = '';
+  } else {
+    brollTab.style.display = 'none';
+    imagesTab.style.display = 'block';
+    tabImages.style.borderBottomColor = 'var(--amber)';
+    tabImages.style.color = 'var(--amber)';
+    tabBroll.style.borderBottomColor = 'transparent';
+    tabBroll.style.color = '';
+  }
 }
 
+async function searchBroll() {
+  const raw = document.getElementById('brollKeywords').value.trim();
+  if (!raw) { showAlert('brollAlert', '⚠ Digite palavras-chave.', 'error'); return; }
+
+  const keywords = raw.split(',').map(k => k.trim()).filter(Boolean);
+  const collection = document.getElementById('brollCollection').value;
+
+  setLoading('brollSearchBtn', 'brollSpin', true);
+  hideAlert('brollAlert');
+
+  try {
+    const res = await fetch('/broll/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keywords, collection }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro na pesquisa');
+
+    const clips = data.clips || [];
+    document.getElementById('brollCount').textContent = `${clips.length} clips`;
+    document.getElementById('brollGrid').innerHTML = clips.map((c, i) => `
+      <div style="background:var(--bg2); border:1px solid var(--border2); border-radius:3px; overflow:hidden; cursor:pointer;"
+           onclick="this.classList.toggle('selected'); this.style.borderColor = this.classList.contains('selected') ? 'var(--amber)' : 'var(--border2)';"
+           data-broll-url="${escHtml(c.download_url)}" data-broll-title="${escHtml(c.title)}">
+        <img src="${c.thumb}" alt="${escHtml(c.title)}" style="width:100%; height:100px; object-fit:cover; display:block;">
+        <div style="padding:8px;">
+          <div style="font-family:var(--mono); font-size:10px; color:var(--text); line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(c.title)}</div>
+          <div style="font-family:var(--mono); font-size:9px; color:var(--text3); margin-top:3px;">📋 ${escHtml(c.license).slice(0,30)}</div>
+        </div>
+      </div>`).join('');
+    document.getElementById('brollResults').style.display = clips.length ? 'block' : 'none';
+
+    if (!clips.length) showAlert('brollAlert', 'Nenhum resultado encontrado.', 'info');
+    else showAlert('brollAlert', `✓ ${clips.length} clips encontrados. Clique para selecionar.`, 'success');
+
+  } catch (e) {
+    showAlert('brollAlert', '✗ ' + e.message, 'error');
+  } finally {
+    setLoading('brollSearchBtn', 'brollSpin', false);
+  }
+}
+
+let selectedImageFiles = [];
+
 function onImageFiles(input) {
-  const files = Array.from(input.files).slice(0, 20);
+  const files = Array.from(input.files).slice(0, 50);
   selectedImageFiles = files;
-  document.getElementById('imgCount').textContent = `${files.length} / 20 imagens`;
+  document.getElementById('imgCount').textContent = `${files.length} / 50 imagens`;
 
   const label = document.getElementById('imgDropLabel');
   label.innerHTML = files.length
     ? `<strong style="color:var(--green)">✓ ${files.length} imagens selecionadas</strong>`
-    : '<strong>Clique</strong> ou arraste as imagens (máx 20)';
+    : '<strong>Clique</strong> ou arraste as imagens (máx 50)';
 
-  /* Thumbnails */
   const strip = document.getElementById('imagePreviews');
   strip.innerHTML = '';
   files.forEach((f, i) => {
@@ -1527,10 +1688,37 @@ function onImageFiles(input) {
     wrap.innerHTML = `<img src="${url}" alt="img ${i+1}"><div class="thumb-num">${i+1}</div>`;
     strip.appendChild(wrap);
   });
+
+  updateAssetList();
+  document.getElementById('hint3').style.display = files.length ? 'block' : 'none';
+  if (files.length) {
+    setBadge(3, 'done', 'PRONTO');
+    document.getElementById('nav-3').classList.add('done');
+  }
+}
+
+function updateAssetList() {
+  const count = selectedImageFiles.length;
+  document.getElementById('assetCount').textContent = `${count} assets`;
+  document.getElementById('assetList').innerHTML = selectedImageFiles.map((f, i) =>
+    `<div style="padding:3px 0;">${String(i+1).padStart(2,'0')}. 🖼 ${escHtml(f.name)}</div>`
+  ).join('');
+}
+
+/* ══════════════════════════════════════════
+   STAGE 4 — ASSEMBLE (async polling)
+══════════════════════════════════════════ */
+let selectedAudioFile = null;
+
+function onAudioFile(input) {
+  selectedAudioFile = input.files[0] || null;
+  const label = document.getElementById('audioDropLabel');
+  label.innerHTML = selectedAudioFile
+    ? `<strong style="color:var(--green)">✓ ${escHtml(selectedAudioFile.name)}</strong>`
+    : '<strong>Clique</strong> ou arraste o .wav aqui';
 }
 
 async function runAssemble() {
-  /* Use audio blob from stage 2 if available, otherwise fall back to file input */
   const audioSource = state.audioBlob
     ? new File([state.audioBlob], 'audio.wav', { type: 'audio/wav' })
     : selectedAudioFile;
@@ -1541,13 +1729,15 @@ async function runAssemble() {
   }
 
   if (!selectedImageFiles.length) {
-    showAlert('assembleAlert', '⚠ Selecione pelo menos 1 imagem.', 'error');
+    showAlert('assembleAlert', '⚠ Adicione imagens na etapa Media Library.', 'error');
     return;
   }
 
   setLoading('assembleBtn', 'assembleSpin', true);
-  showAlert('assembleAlert', 'Montando vídeo com FFmpeg... (pode levar 1–3 min)', 'loading');
+  showAlert('assembleAlert', 'Enviando arquivos e iniciando montagem...', 'loading');
   document.getElementById('videoResult').classList.remove('show');
+  document.getElementById('assembleProgress').classList.add('show');
+  setAssembleProgress(0, 'Iniciando...');
 
   try {
     const form = new FormData();
@@ -1555,42 +1745,72 @@ async function runAssemble() {
     selectedImageFiles.forEach(f => form.append('images', f, f.name));
 
     const res = await fetch('/assemble', { method: 'POST', body: form });
+    const data = await res.json();
 
-    if (!res.ok) {
-      let msg = 'Erro no servidor.';
-      try { const j = await res.json(); msg = j.error || msg; } catch {}
-      throw new Error(msg);
-    }
+    if (!res.ok) throw new Error(data.error || 'Erro no servidor');
 
-    const blob   = await res.blob();
-    const vidUrl = URL.createObjectURL(blob);
+    const jobId = data.job_id;
+    showAlert('assembleAlert', `Job iniciado: ${jobId.slice(0,8)}... Aguardando...`, 'loading');
 
-    document.getElementById('videoPlayer').src = vidUrl;
-    document.getElementById('videoDownload').href = vidUrl;
-    document.getElementById('videoResult').classList.add('show');
-    document.getElementById('videoResult').scrollIntoView({ behavior: 'smooth' });
+    // Polling
+    const poll = setInterval(async () => {
+      try {
+        const s = await fetch(`/assemble/status/${jobId}`).then(r => r.json());
+        setAssembleProgress(s.progress * 100, `Montando... ${Math.round(s.progress * 100)}%`);
 
-    setBadge(3, 'done', 'PRONTO');
-    document.getElementById('nav-3').classList.add('done');
-    showAlert('assembleAlert', '✓ Vídeo montado com sucesso!', 'success');
+        if (s.status === 'done') {
+          clearInterval(poll);
+          setAssembleProgress(100, 'Finalizado!');
+
+          document.getElementById('videoDownload').href = s.download_url;
+          // Load video for preview
+          const vidRes = await fetch(s.download_url);
+          const blob = await vidRes.blob();
+          document.getElementById('videoPlayer').src = URL.createObjectURL(blob);
+
+          document.getElementById('videoResult').classList.add('show');
+          document.getElementById('videoResult').scrollIntoView({ behavior: 'smooth' });
+
+          setBadge(4, 'done', 'PRONTO');
+          document.getElementById('nav-4').classList.add('done');
+          showAlert('assembleAlert', '✓ Vídeo montado com sucesso!', 'success');
+          setLoading('assembleBtn', 'assembleSpin', false);
+
+        } else if (s.status === 'error') {
+          clearInterval(poll);
+          throw new Error(s.error || 'Erro durante montagem');
+        }
+      } catch (e) {
+        clearInterval(poll);
+        showAlert('assembleAlert', '✗ ' + e.message, 'error');
+        setLoading('assembleBtn', 'assembleSpin', false);
+      }
+    }, 5000);
 
   } catch (e) {
     showAlert('assembleAlert', '✗ ' + e.message, 'error');
-  } finally {
     setLoading('assembleBtn', 'assembleSpin', false);
   }
+}
+
+function setAssembleProgress(pct, label) {
+  document.getElementById('assembleProgressFill').style.width = pct + '%';
+  document.getElementById('assembleProgressPct').textContent = Math.round(pct) + '%';
+  document.getElementById('assembleProgressLabel').textContent = label;
 }
 
 /* ── Badge helper ── */
 function setBadge(stage, type, text) {
   const el = document.getElementById('badge-' + stage);
-  el.textContent = text;
-  el.className = 'stage-badge badge-' + type;
+  if (el) {
+    el.textContent = text;
+    el.className = 'stage-badge badge-' + type;
+  }
 }
 
 /* ── Escape HTML ── */
 function escHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 /* ── Init ── */
@@ -1600,6 +1820,7 @@ updateTtsCount();
 /* Drag-over effect */
 ['audioDrop','imgDrop'].forEach(id => {
   const el = document.getElementById(id);
+  if (!el) return;
   el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
   el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
   el.addEventListener('drop', () => el.classList.remove('drag-over'));

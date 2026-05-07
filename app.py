@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_file, render_template_string, Response, stream_with_context
 from google import genai
 from google.genai import types
-import wave, io, os
+import wave, io, os, glob
 import base64
 import json
 import time
@@ -15,6 +15,11 @@ nltk.download('punkt', quiet=True)
 nltk.download('punkt_tab', quiet=True)
 
 app = Flask(__name__)
+
+# ─── Temp directories ────────────────────────────────────────────────────────
+
+TMP_SESSIONS = "/tmp/tts_sessions"
+TMP_JOBS     = "/tmp/tts_jobs"
 
 HTML = open(os.path.join(os.path.dirname(__file__), "index.html"), encoding="utf-8").read()
 
@@ -50,7 +55,7 @@ Your task: transform raw input text into a dramatic, engaging video script.
 
 SCRIPT RULES:
 1. Write ONLY in English, regardless of input language.
-2. Minimum 2000 words. Aim for 2500 words (approximately 15 minutes of narration).
+2. Minimum 3500 words. Aim for 4000 words (approximately 23 minutes of narration).
 3. Use long, flowing paragraphs — NO bullet points, NO lists, NO headers inside the script body.
 4. Open with a powerful hook: a dramatic scene, shocking statistic, or provocative question.
 5. Maintain a tone of gravitas, patriotism, and historical curiosity throughout.
@@ -60,16 +65,24 @@ SCRIPT RULES:
 9. Use timestamps every ~30 seconds in the format [MM:SS - Section Name] to help with video editing.
 
 IMAGE PROMPTS RULES (append AFTER the script):
-- Generate exactly 15 image prompts in English.
+- Generate exactly 40 image prompts, one approximately every 34 seconds of narration.
+- Each prompt MUST be a JSON object with three fields:
+  - "timestamp": the [MM:SS] timestamp from the script where this image should appear
+  - "cue": a short editorial label (e.g. "Opening Shot — Cold War dawn", "Act 2 — The Chase")
+  - "prompt": the full image generation prompt in English
 - Style: dramatic black and white photorealistic photography, 16:9 aspect ratio, cinematic lighting.
-- Each prompt should describe a specific scene from the script.
+- Each prompt should describe a specific scene from the script at that timestamp.
 - Format as a JSON array at the very end, after the marker: ===IMAGE_PROMPTS===
 
 OUTPUT FORMAT:
 [Full script text with timestamps]
 
 ===IMAGE_PROMPTS===
-["prompt 1", "prompt 2", ..., "prompt 15"]
+[
+  {"timestamp": "00:00", "cue": "Opening Shot", "prompt": "dramatic aerial view..."},
+  {"timestamp": "00:34", "cue": "Act 1", "prompt": "..."},
+  ...
+]
 """
 
 # ─── Chunking ─────────────────────────────────────────────────────────────────
@@ -119,99 +132,233 @@ def chunk_text(text: str, max_chars: int = 3000) -> list[str]:
 
     return chunks
 
-# ─── FFmpeg video assembly ────────────────────────────────────────────────────
+# ─── FFmpeg video assembly — Ken Burns Two-Pass ──────────────────────────────
 
-def assemble_video(audio_path: str, image_paths: list[str], output_path: str) -> bool:
+import threading
+import requests as http_requests  # avoid conflict with flask.request
+
+# ── Job tracking ──
+JOBS: dict[str, dict] = {}
+MAX_AGE_SECS = 2 * 60 * 60  # 2 hours
+
+def get_video_encoder() -> tuple:
     """
-    Monta um vídeo MP4 a partir de um WAV e uma lista de imagens.
-
-    Estratégia:
-    1. Pegar a duração total do áudio com ffprobe
-    2. Dividir a duração igualmente entre as imagens
-    3. Montar slideshow com crossfade entre imagens
-    4. Combinar com áudio
-    5. Output: MP4 H.264, AAC audio, 1920x1080, CRF 23
+    Detecta se NVENC está disponível e retorna o encoder + flags corretos.
+    Fallback automático para libx264 se não houver GPU Nvidia.
     """
     try:
-        # 1. Obter duração do áudio
-        probe_result = subprocess.run(
-            ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_format', audio_path],
-            capture_output=True, text=True, timeout=30
+        result = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-encoders"],
+            capture_output=True, text=True, timeout=10
         )
-        probe_data = json.loads(probe_result.stdout)
-        total_duration = float(probe_data['format']['duration'])
+        if "h264_nvenc" in result.stdout:
+            return "h264_nvenc", ["-cq", "23", "-preset", "p4"]
+    except Exception:
+        pass
+    return "libx264", ["-crf", "23", "-preset", "ultrafast"]
 
-        n = len(image_paths)
-        duration_per_image = total_duration / n
-        fade_duration = min(0.5, duration_per_image * 0.2)  # máx 20% da duração por imagem
 
-        if n == 1:
-            # Caso simples: uma imagem estática
-            cmd = [
-                'ffmpeg', '-y',
-                '-loop', '1', '-i', image_paths[0],
-                '-i', audio_path,
-                '-c:v', 'libx264', '-crf', '23', '-preset', 'ultrafast',
-                '-vf', 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2',
-                '-c:a', 'aac', '-b:a', '192k',
-                '-shortest', '-pix_fmt', 'yuv420p',
-                output_path
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
+def get_audio_duration(audio_path: str) -> float:
+    """Get audio duration in seconds via ffprobe."""
+    probe_result = subprocess.run(
+        ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_format', audio_path],
+        capture_output=True, text=True, timeout=30
+    )
+    probe_data = json.loads(probe_result.stdout)
+    return float(probe_data['format']['duration'])
+
+
+def assemble_video(audio_path: str, asset_paths: list[str], output_path: str,
+                   job_id: str = None) -> bool:
+    """
+    Ken Burns Two-Pass video assembly.
+
+    Pass 1: Generate individual clips with zoompan effect (memory O(1) per clip).
+    Pass 2: Concat demuxer joins all clips + audio without re-encoding video.
+
+    Supports mixed assets: images (.jpg/.png) get Ken Burns, videos (.mp4/.mov) are used directly.
+    """
+    try:
+        total_duration = get_audio_duration(audio_path)
+        job_dir = os.path.dirname(output_path)
+        encoder, enc_flags = get_video_encoder()
+
+        # Separate images from video clips
+        image_indices = []
+        video_indices = []
+        for i, path in enumerate(asset_paths):
+            ext = os.path.splitext(path)[1].lower()
+            if ext in ('.mp4', '.mov', '.webm'):
+                video_indices.append(i)
+            else:
+                image_indices.append(i)
+
+        n = len(asset_paths)
+        duration_per_asset = total_duration / n if n > 0 else total_duration
+
+        clip_paths = []
+        fps = 25
+
+        # ── Pass 1: Generate individual clips ──
+        for idx, asset_path in enumerate(asset_paths):
+            ext = os.path.splitext(asset_path)[1].lower()
+            clip_path = os.path.join(job_dir, f"clip_{idx:04d}.mp4")
+
+            if ext in ('.mp4', '.mov', '.webm'):
+                # Video clip: trim to duration, re-encode to match format
+                cmd = [
+                    'ffmpeg', '-y', '-i', asset_path,
+                    '-t', str(duration_per_asset),
+                    '-vf', f'scale=1920:1080:force_original_aspect_ratio=decrease,'
+                           f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1',
+                    '-r', str(fps),
+                    '-c:v', encoder, *enc_flags,
+                    '-an', '-pix_fmt', 'yuv420p',
+                    clip_path
+                ]
+            else:
+                # Image: Ken Burns zoompan effect
+                # Alternate zoom in (even) / zoom out (odd)
+                if idx % 2 == 0:
+                    # Zoom IN: start at 1.0, zoom to 1.5
+                    z_expr = "min(zoom+0.0015,1.5)"
+                else:
+                    # Zoom OUT: start at 1.5, zoom to 1.0
+                    z_expr = "if(lte(zoom\\,1.0)\\,1.5\\,max(1.0\\,zoom-0.0015))"
+
+                # Duration in frames for zoompan
+                d_frames = int(duration_per_asset * fps)
+
+                # Scale up first (4x output), then zoompan downscales to 1920x1080
+                vf_filter = (
+                    f"scale=8000:4500:force_original_aspect_ratio=decrease,"
+                    f"pad=8000:4500:(ow-iw)/2:(oh-ih)/2,setsar=1,"
+                    f"zoompan=z='{z_expr}'"
+                    f":x='iw/2-(iw/zoom/2)'"
+                    f":y='ih/2-(ih/zoom/2)'"
+                    f":d={d_frames}:s=1920x1080:fps={fps}"
+                )
+
+                cmd = [
+                    'ffmpeg', '-y',
+                    '-loop', '1', '-i', asset_path,
+                    '-vf', vf_filter,
+                    '-t', str(duration_per_asset),
+                    '-r', str(fps),
+                    '-c:v', encoder, *enc_flags,
+                    '-pix_fmt', 'yuv420p',
+                    clip_path
+                ]
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
             if result.returncode != 0:
-                print(f"[ERROR] FFmpeg single image: {result.stderr}")
+                print(f"[ERROR] Pass 1 clip {idx}: {result.stderr[-500:]}")
                 return False
-            return True
 
-        # Caso múltiplas imagens: slideshow com xfade
-        # Construir filter_complex
-        inputs = []
-        for img in image_paths:
-            inputs.extend(['-loop', '1', '-t', str(duration_per_image + fade_duration), '-i', img])
+            clip_paths.append(clip_path)
 
-        # Scale cada input para 1920x1080
-        filter_parts = []
-        for i in range(n):
-            filter_parts.append(
-                f'[{i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,'
-                f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1[v{i}]'
-            )
+            # Update job progress
+            if job_id and job_id in JOBS:
+                JOBS[job_id]["progress"] = (idx + 1) / (n + 1)  # reserve last slot for pass 2
 
-        # Encadear xfade
-        xfade_chain = '[v0]'
-        for i in range(1, n):
-            offset = duration_per_image * i - fade_duration * (i - 1) - fade_duration
-            offset = max(0.1, offset)
-            xfade_chain += f'[v{i}]xfade=transition=fade:duration={fade_duration:.2f}:offset={offset:.2f}'
-            if i < n - 1:
-                xfade_chain += f'[xf{i}];[xf{i}]'
-        xfade_chain += '[vout]'
+            print(f"[Pass 1] Clip {idx+1}/{n} done: {os.path.basename(asset_path)}")
 
-        filter_complex = ';'.join(filter_parts) + ';' + xfade_chain
+        # ── Pass 2: Concat all clips + audio ──
+        clips_txt_path = os.path.join(job_dir, "clips.txt")
+        with open(clips_txt_path, "w") as f:
+            for cp in clip_paths:
+                f.write(f"file '{cp}'\n")
 
-        cmd = (
-            ['ffmpeg', '-y'] +
-            inputs +
-            ['-i', audio_path,
-             '-filter_complex', filter_complex,
-             '-map', '[vout]',
-             '-map', f'{n}:a',
-             '-c:v', 'libx264', '-crf', '23', '-preset', 'ultrafast',
-             '-c:a', 'aac', '-b:a', '192k',
-             '-pix_fmt', 'yuv420p',
-             '-shortest',
-             output_path]
-        )
+        cmd = [
+            'ffmpeg', '-y',
+            '-f', 'concat', '-safe', '0', '-i', clips_txt_path,
+            '-i', audio_path,
+            '-c:v', 'copy',  # clips already encoded — just copy
+            '-c:a', 'aac', '-b:a', '192k', '-ar', '48000',
+            '-shortest',
+            output_path
+        ]
 
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
         if result.returncode != 0:
-            print(f"[ERROR] FFmpeg slideshow: {result.stderr}")
+            print(f"[ERROR] Pass 2 concat: {result.stderr[-500:]}")
             return False
+
+        if job_id and job_id in JOBS:
+            JOBS[job_id]["progress"] = 1.0
+
+        print(f"[Pass 2] Final video assembled: {output_path}")
         return True
 
     except Exception as e:
         print(f"[ERROR] assemble_video: {e}")
         return False
+
+
+# ─── Cleanup worker ──────────────────────────────────────────────────────────
+
+def cleanup_worker():
+    """Background thread that cleans up old temp directories every 30 minutes."""
+    while True:
+        now = time.time()
+        for base_dir in (TMP_JOBS, TMP_SESSIONS):
+            if not os.path.exists(base_dir):
+                continue
+            try:
+                for entry in os.scandir(base_dir):
+                    if not entry.is_dir():
+                        continue
+                    age = now - entry.stat().st_mtime
+                    if age > MAX_AGE_SECS:
+                        shutil.rmtree(entry.path, ignore_errors=True)
+                        JOBS.pop(entry.name, None)
+                        print(f"[CLEANUP] Removed {entry.path} (age: {age/3600:.1f}h)")
+            except Exception as e:
+                print(f"[CLEANUP ERROR] {e}")
+        time.sleep(30 * 60)  # check every 30 minutes
+
+
+# ─── B-Roll Scraper (archive.org) ────────────────────────────────────────────
+
+ARCHIVE_SEARCH = "https://archive.org/advancedsearch.php"
+SAFE_COLLECTIONS = {"nasa", "prelinger", "national-archives"}
+
+
+def search_broll(keywords: list[str], collection: str = "prelinger") -> list[dict]:
+    """Search archive.org for public domain video clips."""
+    if collection not in SAFE_COLLECTIONS:
+        collection = "prelinger"
+
+    query = " ".join(keywords) + f" collection:{collection} mediatype:movies"
+    params = {
+        "q": query,
+        "fl[]": ["identifier", "title", "description", "subject", "licenseurl"],
+        "rows": 20,
+        "output": "json",
+    }
+    r = http_requests.get(ARCHIVE_SEARCH, params=params, timeout=15)
+    docs = r.json()["response"]["docs"]
+
+    results = []
+    for d in docs:
+        license_url = d.get("licenseurl", "")
+        is_public_domain = "publicdomain" in license_url.lower()
+        # All items in safe collections are public domain by definition
+        is_safe = collection in SAFE_COLLECTIONS or is_public_domain
+
+        if not is_safe:
+            continue
+
+        results.append({
+            "title": d.get("title", ""),
+            "identifier": d["identifier"],
+            "license": license_url or "public domain (collection)",
+            "download_url": f"https://archive.org/download/{d['identifier']}",
+            "thumb": f"https://archive.org/services/img/{d['identifier']}",
+        })
+
+    return results[:10]
+
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
 
@@ -297,11 +444,12 @@ def generate():
 
 @app.route("/generate-stream", methods=["POST"])
 def generate_stream():
-    """TTS com chunking e progresso via SSE."""
+    """TTS com chunking, progresso via SSE e checkpointing em disco."""
     data = request.json
     api_key = data.get("api_key", "").strip()
     text = data.get("text", "").strip()
     voice = data.get("voice", "Charon")
+    session_id = data.get("session_id") or str(uuid.uuid4())
 
     if not api_key:
         return jsonify({"error": "API Key do Gemini e obrigatoria."}), 400
@@ -309,12 +457,36 @@ def generate_stream():
         return jsonify({"error": "Texto nao pode estar vazio."}), 400
 
     def event_stream():
-        chunks = chunk_text(text)
+        # ── Session directory ──
+        session_dir = os.path.join(TMP_SESSIONS, session_id)
+        os.makedirs(session_dir, exist_ok=True)
+
+        # Emit session event first so frontend can save it for retry
+        yield f"data: {json.dumps({'type': 'session', 'session_id': session_id})}\n\n"
+
+        # ── Deterministic chunking — persist on first run ──
+        chunks_meta = os.path.join(session_dir, "chunks.json")
+        if os.path.exists(chunks_meta):
+            with open(chunks_meta, "r") as f:
+                chunks = json.load(f)
+        else:
+            chunks = chunk_text(text)
+            with open(chunks_meta, "w") as f:
+                json.dump(chunks, f)
+
         n = len(chunks)
-        all_pcm = []
         client = genai.Client(api_key=api_key)
+        chunks_processed = 0
 
         for i, chunk in enumerate(chunks):
+            chunk_path = os.path.join(session_dir, f"chunk_{i:04d}.pcm")
+
+            # ── Checkpoint: skip if already on disk ──
+            if os.path.exists(chunk_path) and os.path.getsize(chunk_path) > 0:
+                yield f"data: {json.dumps({'type': 'skipped', 'chunk': i + 1, 'total': n})}\n\n"
+                chunks_processed += 1
+                continue
+
             # Envia progresso
             progress_event = json.dumps({
                 "type": "progress",
@@ -340,7 +512,12 @@ def generate_stream():
                     ),
                 )
                 pcm_data = response.candidates[0].content.parts[0].inline_data.data
-                all_pcm.append(pcm_data)
+
+                # ── Save chunk to disk ──
+                with open(chunk_path, "wb") as f:
+                    f.write(pcm_data)
+                chunks_processed += 1
+
             except Exception as e:
                 error_event = json.dumps({
                     "type": "error",
@@ -351,13 +528,14 @@ def generate_stream():
                 print(f"[WARN] Chunk {i+1} falhou: {e}")
                 continue
 
-        if not all_pcm:
+        # ── Final: read all .pcm from disk in order → WAV → base64 ──
+        pcm_files = sorted(glob.glob(os.path.join(session_dir, "chunk_*.pcm")))
+        if not pcm_files:
             error_event = json.dumps({"type": "error", "chunk": 0, "message": "Nenhum chunk processado com sucesso."})
             yield f"data: {error_event}\n\n"
             return
 
-        # Concatena PCM e converte para WAV
-        combined_pcm = b"".join(all_pcm)
+        combined_pcm = b"".join(open(f, "rb").read() for f in pcm_files)
         buf = io.BytesIO()
         with wave.open(buf, "wb") as wf:
             wf.setnchannels(1)
@@ -371,7 +549,7 @@ def generate_stream():
         done_event = json.dumps({
             "type": "done",
             "audio_b64": audio_b64,
-            "chunks_processed": len(all_pcm)
+            "chunks_processed": chunks_processed
         })
         yield f"data: {done_event}\n\n"
 
@@ -451,9 +629,19 @@ def scriptify():
         except Exception as e:
             print(f"[WARN] Erro ao extrair blocos de imagem: {e}")
 
+        # ── Parse image prompts (supports both dict and string formats) ──
+        parsed_prompts = []
+        raw_items = image_prompts if image_prompts else []
+        for item in raw_items:
+            if isinstance(item, dict) and "prompt" in item:
+                parsed_prompts.append(item)
+            elif isinstance(item, str):
+                # Backward compatibility: plain string prompts
+                parsed_prompts.append({"timestamp": "00:00", "cue": "", "prompt": item})
+
         return jsonify({
             "script": script_part,
-            "image_prompts": image_prompts,
+            "image_prompts": parsed_prompts,
             "source_chars": len(raw_text)
         })
 
@@ -464,7 +652,7 @@ def scriptify():
 
 @app.route("/assemble", methods=["POST"])
 def assemble():
-    """Monta um MP4 a partir de WAV + imagens via FFmpeg."""
+    """Monta um MP4 a partir de WAV + imagens/vídeos via FFmpeg (background task)."""
     if not FFMPEG_AVAILABLE:
         return jsonify({"error": "FFmpeg não está instalado no servidor. Instale FFmpeg para usar esta funcionalidade."}), 503
 
@@ -474,9 +662,9 @@ def assemble():
     if not audio_file:
         return jsonify({"error": "Arquivo de áudio (WAV) é obrigatório."}), 400
     if not image_files:
-        return jsonify({"error": "Pelo menos 1 imagem é obrigatória."}), 400
-    if len(image_files) > 20:
-        return jsonify({"error": "Máximo de 20 imagens permitidas."}), 400
+        return jsonify({"error": "Pelo menos 1 imagem/vídeo é obrigatório."}), 400
+    if len(image_files) > 50:
+        return jsonify({"error": "Máximo de 50 assets permitidos."}), 400
 
     # Validar mimetype do áudio
     audio_mime = audio_file.mimetype or ""
@@ -484,58 +672,164 @@ def assemble():
     if not (audio_mime.startswith("audio/") or audio_name.lower().endswith(".wav")):
         return jsonify({"error": "O arquivo de áudio deve ser um WAV."}), 400
 
-    # Validar imagens
+    # Validar imagens/vídeos
+    valid_image_types = ("image/jpeg", "image/png")
+    valid_video_types = ("video/mp4", "video/quicktime", "video/webm")
     for img in image_files:
-        if img.mimetype not in ("image/jpeg", "image/png"):
-            return jsonify({"error": f"Imagem inválida: {img.filename}. Apenas JPG e PNG são aceitos."}), 400
+        if img.mimetype not in valid_image_types + valid_video_types:
+            return jsonify({"error": f"Arquivo inválido: {img.filename}. Aceitos: JPG, PNG, MP4, MOV, WebM."}), 400
 
-    tmp_dir = tempfile.mkdtemp()
-    try:
-        # Salvar áudio
-        audio_id = uuid.uuid4().hex
-        audio_path = os.path.join(tmp_dir, f"audio_{audio_id}.wav")
-        audio_file.save(audio_path)
+    # ── Create job directory ──
+    job_id = uuid.uuid4().hex
+    job_dir = os.path.join(TMP_JOBS, job_id)
+    os.makedirs(job_dir, exist_ok=True)
 
-        # Salvar imagens em ordem
-        image_paths = []
-        for i, img in enumerate(image_files):
-            ext = ".jpg" if img.mimetype == "image/jpeg" else ".png"
-            img_path = os.path.join(tmp_dir, f"img_{i:04d}_{uuid.uuid4().hex}{ext}")
-            img.save(img_path)
-            image_paths.append(img_path)
+    # Save audio
+    audio_path = os.path.join(job_dir, f"audio_{job_id}.wav")
+    audio_file.save(audio_path)
 
-        # Output
-        output_path = os.path.join(tmp_dir, f"video_{uuid.uuid4().hex}.mp4")
+    # Save assets in order
+    asset_paths = []
+    for i, f in enumerate(image_files):
+        fname = f.filename or f"asset_{i}"
+        ext = os.path.splitext(fname)[1].lower() or ".jpg"
+        asset_path = os.path.join(job_dir, f"asset_{i:04d}{ext}")
+        f.save(asset_path)
+        asset_paths.append(asset_path)
 
-        success = assemble_video(audio_path, image_paths, output_path)
+    output_path = os.path.join(job_dir, f"video_{job_id}.mp4")
 
-        if not success or not os.path.exists(output_path):
-            return jsonify({"error": "Falha ao montar o vídeo. Verifique os arquivos enviados."}), 500
+    # ── Register job ──
+    JOBS[job_id] = {
+        "status": "processing",
+        "progress": 0.0,
+        "output_path": output_path,
+        "error": None,
+        "created_at": time.time(),
+    }
 
-        return send_file(
-            output_path,
-            mimetype="video/mp4",
-            as_attachment=True,
-            download_name="video.mp4"
-        )
-
-    except Exception as e:
-        print(f"[ERROR] /assemble: {e}")
-        return jsonify({"error": str(e)}), 500
-    finally:
+    # ── Background thread ──
+    def run_job():
         try:
-            shutil.rmtree(tmp_dir)
-        except Exception:
-            pass
+            success = assemble_video(audio_path, asset_paths, output_path, job_id=job_id)
+            if success and os.path.exists(output_path):
+                JOBS[job_id]["status"] = "done"
+                JOBS[job_id]["progress"] = 1.0
+            else:
+                JOBS[job_id]["status"] = "error"
+                JOBS[job_id]["error"] = "FFmpeg falhou ao montar o vídeo."
+        except Exception as e:
+            JOBS[job_id]["status"] = "error"
+            JOBS[job_id]["error"] = str(e)
+            print(f"[ERROR] Job {job_id}: {e}")
+
+    t = threading.Thread(target=run_job, daemon=True)
+    t.start()
+
+    return jsonify({"job_id": job_id}), 202
+
+
+@app.route("/assemble/status/<job_id>", methods=["GET"])
+def assemble_status(job_id):
+    """Retorna o status e progresso de um job de montagem."""
+    job = JOBS.get(job_id)
+    if not job:
+        return jsonify({"error": "Job não encontrado."}), 404
+
+    result = {
+        "status": job["status"],
+        "progress": round(job["progress"], 3),
+    }
+
+    if job["status"] == "done":
+        result["download_url"] = f"/assemble/download/{job_id}"
+    elif job["status"] == "error":
+        result["error"] = job["error"]
+
+    return jsonify(result)
+
+
+@app.route("/assemble/download/<job_id>", methods=["GET"])
+def assemble_download(job_id):
+    """Serve o MP4 finalizado de um job."""
+    job = JOBS.get(job_id)
+    if not job:
+        return jsonify({"error": "Job não encontrado."}), 404
+    if job["status"] != "done":
+        return jsonify({"error": "Vídeo ainda não está pronto."}), 400
+    if not os.path.exists(job["output_path"]):
+        return jsonify({"error": "Arquivo de vídeo não encontrado."}), 404
+
+    return send_file(
+        job["output_path"],
+        mimetype="video/mp4",
+        as_attachment=True,
+        download_name="video_final.mp4"
+    )
+
+
+# ─── B-Roll Routes ───────────────────────────────────────────────────────────
+
+@app.route("/broll/search", methods=["POST"])
+def broll_search():
+    """Pesquisa clips de vídeo de domínio público no archive.org."""
+    data = request.json or {}
+    keywords = data.get("keywords", [])
+    collection = data.get("collection", "prelinger")
+
+    if not keywords:
+        return jsonify({"error": "Palavras-chave são obrigatórias."}), 400
+
+    try:
+        clips = search_broll(keywords, collection)
+        return jsonify({"clips": clips})
+    except Exception as e:
+        print(f"[ERROR] /broll/search: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/broll/download", methods=["POST"])
+def broll_download():
+    """Download de um clip do archive.org para uso local."""
+    data = request.json or {}
+    url = data.get("url", "").strip()
+
+    if not url or not url.startswith("https://archive.org/"):
+        return jsonify({"error": "URL inválida. Deve ser do archive.org."}), 400
+
+    try:
+        filename = url.split("/")[-1]
+        broll_dir = "/tmp/broll"
+        os.makedirs(broll_dir, exist_ok=True)
+        dest = os.path.join(broll_dir, filename)
+
+        with http_requests.get(url, stream=True, timeout=60) as r:
+            r.raise_for_status()
+            with open(dest, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+        return jsonify({"local_path": dest, "filename": filename})
+    except Exception as e:
+        print(f"[ERROR] /broll/download: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
-    print("\n[TTS Studio] Rotas disponíveis:")
-    print("  GET  /               → Interface principal")
-    print("  POST /enhance        → Entonação inteligente (existente)")
-    print("  POST /generate       → TTS curto, retorna WAV (existente)")
-    print("  POST /generate-stream → TTS longo com chunking + SSE de progresso (NOVO)")
-    print("  POST /scriptify      → Roteirizar URL → Script + Image Prompts (NOVO)")
-    print("  POST /assemble       → Montar MP4 com imagens + áudio via FFmpeg (NOVO)")
+    # Start cleanup worker thread
+    threading.Thread(target=cleanup_worker, daemon=True).start()
+
+    print("\n[TTS Studio v2.0] Rotas disponíveis:")
+    print("  GET  /                        → Interface principal")
+    print("  POST /enhance                 → Entonação inteligente")
+    print("  POST /generate                → TTS curto, retorna WAV")
+    print("  POST /generate-stream         → TTS longo com checkpointing + SSE")
+    print("  POST /scriptify               → Roteirizar URL → Script + Image Prompts")
+    print("  POST /assemble                → Montar vídeo (background task, retorna job_id)")
+    print("  GET  /assemble/status/<id>    → Status + progresso do job")
+    print("  GET  /assemble/download/<id>  → Download do MP4 finalizado")
+    print("  POST /broll/search            → Pesquisar B-Roll no archive.org")
+    print("  POST /broll/download          → Download de clip do archive.org")
     print()
     app.run(debug=False, port=5000)
+
