@@ -75,51 +75,49 @@ OUTPUT FORMAT:
 # ─── Chunking ─────────────────────────────────────────────────────────────────
 
 def chunk_text(text: str, max_chars: int = 3000) -> list[str]:
-    """Divide o texto em chunks adequados para a API TTS."""
+    """
+    Divide o texto em chunks de forma eficiente, acumulando parágrafos 
+    até atingir o limite de caracteres.
+    """
+    # Remove marcações de tempo [00:00] se quiser que o áudio flua melhor
+    import re
+    text = re.sub(r'\[\d{2}:\d{2}.*?\]', '', text) 
+
     paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
     chunks = []
+    current_chunk = ""
 
     for para in paragraphs:
-        if len(para) < 10:
-            continue
-        if len(para) <= max_chars:
-            chunks.append(para)
-        else:
-            # Subdivide por frases (ponto final seguido de espaço)
-            sentences = []
-            for part in para.split('. '):
-                part = part.strip()
-                if part:
-                    sentences.append(part if part.endswith('.') else part + '.')
-
-            current = ''
+        # Se o parágrafo sozinho for maior que o limite (raro), 
+        # precisamos processar o que já temos e quebrar esse parágrafo
+        if len(para) > max_chars:
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+                current_chunk = ""
+            
+            # Lógica simples de quebra por frases para parágrafos gigantes
+            sentences = para.split('. ')
             for sentence in sentences:
-                if len(current) + len(sentence) + 1 <= max_chars:
-                    current = (current + ' ' + sentence).strip()
+                if len(current_chunk) + len(sentence) + 2 <= max_chars:
+                    current_chunk += sentence + ". "
                 else:
-                    if current:
-                        chunks.append(current)
-                    # Se a frase em si é maior que max_chars, cortamos por palavras
-                    if len(sentence) > max_chars:
-                        words = sentence.split()
-                        sub = ''
-                        for word in words:
-                            if len(sub) + len(word) + 1 <= max_chars:
-                                sub = (sub + ' ' + word).strip()
-                            else:
-                                if sub:
-                                    chunks.append(sub)
-                                sub = word
-                        if sub:
-                            current = sub
-                        else:
-                            current = ''
-                    else:
-                        current = sentence
-            if current:
-                chunks.append(current)
+                    chunks.append(current_chunk.strip())
+                    current_chunk = sentence + ". "
+        
+        # Se o parágrafo cabe no chunk atual
+        elif len(current_chunk) + len(para) + 2 <= max_chars:
+            current_chunk += para + "\n\n"
+        
+        # Se não cabe, fecha o chunk atual e começa um novo
+        else:
+            chunks.append(current_chunk.strip())
+            current_chunk = para + "\n\n"
 
-    return [c for c in chunks if c.strip()]
+    # Adiciona o último balde se não estiver vazio
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+
+    return chunks
 
 # ─── FFmpeg video assembly ────────────────────────────────────────────────────
 
@@ -153,13 +151,13 @@ def assemble_video(audio_path: str, image_paths: list[str], output_path: str) ->
                 'ffmpeg', '-y',
                 '-loop', '1', '-i', image_paths[0],
                 '-i', audio_path,
-                '-c:v', 'libx264', '-crf', '23', '-preset', 'fast',
+                '-c:v', 'libx264', '-crf', '23', '-preset', 'ultrafast',
                 '-vf', 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2',
                 '-c:a', 'aac', '-b:a', '192k',
                 '-shortest', '-pix_fmt', 'yuv420p',
                 output_path
             ]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
             if result.returncode != 0:
                 print(f"[ERROR] FFmpeg single image: {result.stderr}")
                 return False
@@ -198,14 +196,14 @@ def assemble_video(audio_path: str, image_paths: list[str], output_path: str) ->
              '-filter_complex', filter_complex,
              '-map', '[vout]',
              '-map', f'{n}:a',
-             '-c:v', 'libx264', '-crf', '23', '-preset', 'fast',
+             '-c:v', 'libx264', '-crf', '23', '-preset', 'ultrafast',
              '-c:a', 'aac', '-b:a', '192k',
              '-pix_fmt', 'yuv420p',
              '-shortest',
              output_path]
         )
 
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
         if result.returncode != 0:
             print(f"[ERROR] FFmpeg slideshow: {result.stderr}")
             return False
