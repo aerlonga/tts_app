@@ -160,7 +160,8 @@ Após implementar, verificar manualmente:
 Adicionar ao `requirements.txt`:
 ```
 newspaper3k==0.2.8
-lxml[html_clean]
+lxml
+lxml_html_clean
 ```
 
 **Nota:** `newspaper3k` depende de `lxml` e `nltk`. O Claude Code deve adicionar no topo do `app.py`, logo após os imports existentes:
@@ -482,7 +483,8 @@ async function assembleVideo() {
 flask>=3.0.0
 google-genai>=1.0.0
 newspaper3k==0.2.8
-lxml[html_clean]
+lxml
+lxml_html_clean
 nltk
 ```
 

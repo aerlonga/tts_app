@@ -21,7 +21,7 @@ Recomendado usar um ambiente virtual (venv). Instale os pacotes listados no `req
 pip install -r requirements.txt
 ```
 
-*(Caso não use o requirements.txt, você pode rodar: `pip install flask google-genai newspaper3k "lxml[html_clean]" nltk`)*
+*(Caso não use o requirements.txt, você pode rodar: `pip install flask google-genai newspaper3k lxml lxml_html_clean nltk`)*
 
 ### 3. Configuração de Variáveis (Opcional)
 Renomeie o `.env.example` para `.env` e configure sua API Key.
