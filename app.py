@@ -52,7 +52,7 @@ Your task: transform raw input text into a dramatic, engaging video script.
 
 SCRIPT RULES:
 1. Write ONLY in English, regardless of input language.
-2. Minimum 3500 words. Aim for 4000 words (approximately 23 minutes of narration).
+2. Target 2200-2400 words. HARD MAXIMUM: 2500 words, approximately 15 minutes of narration.
 3. Use long, flowing paragraphs — NO bullet points, NO lists, NO headers inside the script body.
 4. Open with a powerful hook: a dramatic scene, shocking statistic, or provocative question.
 5. Maintain a tone of gravitas, patriotism, and historical curiosity throughout.
@@ -60,15 +60,17 @@ SCRIPT RULES:
 7. Add dramatic pauses naturally by ending paragraphs with short, punchy sentences.
 8. DO NOT invent facts. Dramatize what is in the source material, but stay truthful.
 9. Use timestamps every ~30 seconds in the format [MM:SS - Section Name] to help with video editing.
+10. Do not write beyond the 15:00 mark. The final timestamp must be 15:00 or earlier.
 
 IMAGE PROMPTS RULES (append AFTER the script):
-- Generate exactly 40 image prompts, one approximately every 34 seconds of narration.
+- Generate exactly 26 image prompts, one approximately every 34 seconds of narration.
 - Each prompt MUST be a JSON object with three fields:
   - "timestamp": the [MM:SS] timestamp from the script where this image should appear
   - "cue": a short editorial label (e.g. "Opening Shot — Cold War dawn", "Act 2 — The Chase")
   - "prompt": the full image generation prompt in English
 - Style: dramatic black and white photorealistic photography, 16:9 aspect ratio, cinematic lighting.
 - Each prompt should describe a specific scene from the script at that timestamp.
+- Image prompt timestamps must not go beyond [15:00].
 - Format as a JSON array at the very end, after the marker: ===IMAGE_PROMPTS===
 
 OUTPUT FORMAT:
@@ -120,6 +122,9 @@ Return this JSON shape:
 """
 
 # ─── Chunking ─────────────────────────────────────────────────────────────────
+
+STREAM_CHUNK_MAX_CHARS = 9500
+STREAM_THROTTLE_SECONDS = 62
 
 def chunk_text(text: str, max_chars: int = 3000) -> list[str]:
     """
@@ -618,7 +623,7 @@ def generate_stream():
             with open(chunks_meta, "r") as f:
                 chunks = json.load(f)
         else:
-            chunks = chunk_text(text)
+            chunks = chunk_text(text, max_chars=STREAM_CHUNK_MAX_CHARS)
             with open(chunks_meta, "w") as f:
                 json.dump(chunks, f)
 
@@ -665,6 +670,23 @@ def generate_stream():
                 with open(chunk_path, "wb") as f:
                     f.write(pcm_data)
                 chunks_processed += 1
+
+                has_pending_chunks = any(
+                    not (
+                        os.path.exists(os.path.join(session_dir, f"chunk_{j:04d}.pcm")) and
+                        os.path.getsize(os.path.join(session_dir, f"chunk_{j:04d}.pcm")) > 0
+                    )
+                    for j in range(i + 1, n)
+                )
+                if has_pending_chunks:
+                    waiting_event = json.dumps({
+                        "type": "waiting",
+                        "seconds": STREAM_THROTTLE_SECONDS,
+                        "chunk": i + 1,
+                        "total": n
+                    })
+                    yield f"data: {waiting_event}\n\n"
+                    time.sleep(STREAM_THROTTLE_SECONDS)
 
             except Exception as e:
                 error_event = json.dumps({

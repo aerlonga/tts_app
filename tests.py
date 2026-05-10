@@ -174,5 +174,39 @@ class TestTTSApp(unittest.TestCase):
         self.assertEqual(data['shorts'][0]['image_prompts'][0]['cue'], "Opening")
         self.assertEqual(data['shorts'][0]['broll_keywords'][0], "SR-71")
 
+    @patch('app.time.sleep')
+    @patch('app.chunk_text')
+    @patch('app.genai.Client')
+    def test_7_generate_stream_waits_between_new_chunks(self, MockClient, mock_chunk_text, mock_sleep):
+        """Garante chunking maior e throttling SSE entre chunks gerados."""
+        mock_chunk_text.return_value = [
+            "First chunk with enough content to synthesize.",
+            "Second chunk with enough content to synthesize.",
+        ]
+
+        mock_gemini_client = MagicMock()
+        MockClient.return_value = mock_gemini_client
+
+        mock_response = MagicMock()
+        mock_response.candidates[0].content.parts[0].inline_data.data = b'\x00\x00'
+        mock_gemini_client.models.generate_content.return_value = mock_response
+
+        with tempfile.TemporaryDirectory() as tmpdir, patch('app.TMP_SESSIONS', tmpdir):
+            response = self.client.post('/generate-stream', json={
+                'api_key': 'fake_key',
+                'text': 'Long script body',
+                'voice': 'Charon',
+                'session_id': 'test-session',
+            })
+
+        self.assertEqual(response.status_code, 200)
+        mock_chunk_text.assert_called_once_with('Long script body', max_chars=9500)
+        mock_sleep.assert_called_once_with(62)
+        self.assertEqual(mock_gemini_client.models.generate_content.call_count, 2)
+
+        payload = response.data.decode('utf-8')
+        self.assertIn('"type": "waiting"', payload)
+        self.assertIn('"seconds": 62', payload)
+
 if __name__ == '__main__':
     unittest.main()

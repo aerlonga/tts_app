@@ -1703,6 +1703,11 @@ async function runTTS() {
             `Processando chunk ${evt.current} de ${evt.total}...`);
           addLog(`[${String(evt.current).padStart(2,'0')}/${evt.total}] ${evt.preview || ''}...`, 'ok');
 
+        } else if (evt.type === 'waiting') {
+          setProgress(evt.chunk, evt.total || evt.chunk,
+            `Aguardando cota da API (${evt.seconds}s)...`);
+          addLog(`[${String(evt.chunk).padStart(2,'0')}/${evt.total}] aguardando cota da API por ${evt.seconds}s`, 'warn');
+
         } else if (evt.type === 'error') {
           addLog(`[WARN] chunk ${evt.chunk}: ${evt.message}`, 'warn');
 
@@ -2237,6 +2242,8 @@ async function generateShortAudio(index) {
         try { evt = JSON.parse(line); } catch { continue; }
         if (evt.type === 'progress') {
           showAlert(`shortAlert-${index}`, `Narrando chunk ${evt.current}/${evt.total}...`, 'loading');
+        } else if (evt.type === 'waiting') {
+          showAlert(`shortAlert-${index}`, `Aguardando cota da API (${evt.seconds}s)...`, 'loading');
         } else if (evt.type === 'error') {
           showAlert(`shortAlert-${index}`, `Aviso no chunk ${evt.chunk}: ${evt.message}`, 'loading');
         } else if (evt.type === 'done') {
