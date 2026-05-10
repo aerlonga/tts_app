@@ -9,6 +9,7 @@ import subprocess
 import shutil
 import tempfile
 import uuid
+import re
 
 import nltk
 nltk.download('punkt', quiet=True)
@@ -140,6 +141,24 @@ import requests as http_requests  # avoid conflict with flask.request
 # ── Job tracking ──
 JOBS: dict[str, dict] = {}
 MAX_AGE_SECS = 2 * 60 * 60  # 2 hours
+
+PART_NAME_RE = re.compile(r"(?:^|[\s_-])(?:parte|part)\s*0*(\d+)(?=\D|$)", re.IGNORECASE)
+
+def natural_asset_sort_key(filename: str, fallback_index: int = 0):
+    """
+    Sort assets by prompt/image sequence names such as "parte 1", "parte 02",
+    "part 13". Falls back to natural filename sorting for older naming styles.
+    """
+    name = os.path.splitext(os.path.basename(filename or ""))[0].lower()
+    part_match = PART_NAME_RE.search(name)
+    if part_match:
+        return (0, int(part_match.group(1)), name, fallback_index)
+
+    natural_parts = [
+        (0, int(part)) if part.isdigit() else (1, part)
+        for part in re.split(r"(\d+)", name)
+    ]
+    return (1, natural_parts, fallback_index)
 
 def get_video_encoder() -> tuple:
     """
@@ -715,6 +734,13 @@ def assemble():
         manifest = json.loads(manifest_str)
     except Exception:
         manifest = []
+    if manifest and all(item.get("type") == "upload" for item in manifest):
+        manifest = [
+            item for _, item in sorted(
+                enumerate(manifest),
+                key=lambda pair: natural_asset_sort_key(pair[1].get("filename", ""), pair[0])
+            )
+        ]
 
     asset_paths = []
     
@@ -741,7 +767,13 @@ def assemble():
                     asset_paths.append(path)
     else:
         # Fallback: apenas arquivos anexados (comportamento antigo)
-        for i, f in enumerate(image_files):
+        ordered_files = [
+            f for _, f in sorted(
+                enumerate(image_files),
+                key=lambda pair: natural_asset_sort_key(pair[1].filename or "", pair[0])
+            )
+        ]
+        for i, f in enumerate(ordered_files):
             fname = f.filename or f"asset_{i}"
             ext = os.path.splitext(fname)[1].lower() or ".jpg"
             path = os.path.join(job_dir, f"asset_{len(asset_paths):04d}{ext}")
@@ -883,4 +915,3 @@ if __name__ == "__main__":
     print("  POST /broll/download          → Download de clip do archive.org")
     print()
     app.run(debug=False, port=5000)
-

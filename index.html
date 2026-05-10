@@ -1732,8 +1732,48 @@ async function selectBroll(url, title, el) {
 
 let selectedImageFiles = [];
 
+function naturalAssetSortKey(name, fallbackIndex = 0) {
+  const base = String(name || '')
+    .replace(/\.[^.]+$/, '')
+    .toLowerCase();
+  const partMatch = base.match(/(?:^|[\s_-])(?:parte|part)\s*0*(\d+)(?=\D|$)/i);
+  if (partMatch) return { group: 0, part: Number(partMatch[1]), base, fallbackIndex };
+
+  const natural = base.split(/(\d+)/).map(part =>
+    /^\d+$/.test(part) ? [0, Number(part)] : [1, part]
+  );
+  return { group: 1, natural, fallbackIndex };
+}
+
+function compareNaturalAssets(a, b) {
+  const ka = naturalAssetSortKey(a.name, a.fallbackIndex);
+  const kb = naturalAssetSortKey(b.name, b.fallbackIndex);
+  if (ka.group !== kb.group) return ka.group - kb.group;
+  if (ka.group === 0) {
+    if (ka.part !== kb.part) return ka.part - kb.part;
+    const byName = ka.base.localeCompare(kb.base, 'pt-BR', { numeric: true, sensitivity: 'base' });
+    return byName || ka.fallbackIndex - kb.fallbackIndex;
+  }
+  const max = Math.max(ka.natural.length, kb.natural.length);
+  for (let i = 0; i < max; i++) {
+    if (!ka.natural[i]) return -1;
+    if (!kb.natural[i]) return 1;
+    if (ka.natural[i][0] !== kb.natural[i][0]) return ka.natural[i][0] - kb.natural[i][0];
+    if (ka.natural[i][1] !== kb.natural[i][1]) {
+      return ka.natural[i][0] === 0
+        ? ka.natural[i][1] - kb.natural[i][1]
+        : String(ka.natural[i][1]).localeCompare(String(kb.natural[i][1]), 'pt-BR', { sensitivity: 'base' });
+    }
+  }
+  return ka.fallbackIndex - kb.fallbackIndex;
+}
+
 function onImageFiles(input) {
-  const files = Array.from(input.files).slice(0, 50);
+  const files = Array.from(input.files)
+    .map((file, fallbackIndex) => ({ file, name: file.name, fallbackIndex }))
+    .sort(compareNaturalAssets)
+    .map(item => item.file)
+    .slice(0, 50);
   
   // Clear previous uploads from unified list
   state.selectedAssets = state.selectedAssets.filter(a => a.type !== 'upload');
