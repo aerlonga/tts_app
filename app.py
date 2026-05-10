@@ -11,10 +11,6 @@ import tempfile
 import uuid
 import re
 
-import nltk
-nltk.download('punkt', quiet=True)
-nltk.download('punkt_tab', quiet=True)
-
 app = Flask(__name__)
 
 # ─── Temp directories ────────────────────────────────────────────────────────
@@ -86,50 +82,85 @@ OUTPUT FORMAT:
 ]
 """
 
+SHORTS_SYSTEM_PROMPT = """You are a senior YouTube Shorts scriptwriter for an American channel focused on military history, dark historical events, declassified programs, and geopolitical conflict.
+
+Your task: derive short-form vertical video scripts from a long documentary script.
+
+RULES:
+1. Write ONLY in English.
+2. Return ONLY valid JSON. No markdown, no explanations, no code fences.
+3. Generate exactly the requested number of Shorts.
+4. Each Short must fit within the requested duration.
+5. Each Short must feel like a self-contained discovery hook, not a random excerpt.
+6. Keep the tone dark, cinematic, factual, and serious.
+7. Start each script with a strong hook in the first sentence.
+8. End each script with a short CTA that points viewers to the full documentary.
+9. Do not invent facts beyond the source script.
+10. Use plain narration text. No timestamps, no bullet points inside the script.
+
+Return this JSON shape:
+{
+  "shorts": [
+    {
+      "id": "short_1",
+      "title": "Short title under 70 characters",
+      "hook": "The opening hook sentence.",
+      "script": "Full narrated script for the Short.",
+      "cta": "Short CTA sentence.",
+      "image_prompts": [
+        {
+          "cue": "Opening shot",
+          "prompt": "Vertical 9:16 black and white photorealistic cinematic image prompt..."
+        }
+      ],
+      "broll_keywords": ["keyword one", "keyword two", "keyword three"]
+    }
+  ]
+}
+"""
+
 # ─── Chunking ─────────────────────────────────────────────────────────────────
 
 def chunk_text(text: str, max_chars: int = 3000) -> list[str]:
     """
-    Divide o texto em chunks de forma eficiente, acumulando parágrafos 
-    até atingir o limite de caracteres.
+    Divide o texto em chunks por parágrafo e quebra blocos longos sem
+    ultrapassar o limite de caracteres.
     """
-    # Remove marcações de tempo [00:00] se quiser que o áudio flua melhor
-    import re
     text = re.sub(r'\[\d{2}:\d{2}.*?\]', '', text) 
 
     paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
     chunks = []
-    current_chunk = ""
+
+    def split_long_block(block: str) -> list[str]:
+        parts = re.split(r'(?<=[.!?])\s+', block)
+        if len(parts) == 1:
+            parts = block.split()
+
+        out = []
+        current = ""
+        for part in parts:
+            candidate = f"{current} {part}".strip()
+            if len(candidate) <= max_chars:
+                current = candidate
+                continue
+            if current:
+                out.append(current)
+            if len(part) <= max_chars:
+                current = part
+            else:
+                out.extend(part[i:i + max_chars] for i in range(0, len(part), max_chars))
+                current = ""
+        if current:
+            out.append(current)
+        return out
 
     for para in paragraphs:
-        # Se o parágrafo sozinho for maior que o limite (raro), 
-        # precisamos processar o que já temos e quebrar esse parágrafo
-        if len(para) > max_chars:
-            if current_chunk:
-                chunks.append(current_chunk.strip())
-                current_chunk = ""
-            
-            # Lógica simples de quebra por frases para parágrafos gigantes
-            sentences = para.split('. ')
-            for sentence in sentences:
-                if len(current_chunk) + len(sentence) + 2 <= max_chars:
-                    current_chunk += sentence + ". "
-                else:
-                    chunks.append(current_chunk.strip())
-                    current_chunk = sentence + ". "
-        
-        # Se o parágrafo cabe no chunk atual
-        elif len(current_chunk) + len(para) + 2 <= max_chars:
-            current_chunk += para + "\n\n"
-        
-        # Se não cabe, fecha o chunk atual e começa um novo
+        if len(para) < 10:
+            continue
+        if len(para) <= max_chars:
+            chunks.append(para)
         else:
-            chunks.append(current_chunk.strip())
-            current_chunk = para + "\n\n"
-
-    # Adiciona o último balde se não estiver vazio
-    if current_chunk:
-        chunks.append(current_chunk.strip())
+            chunks.extend(split_long_block(para))
 
     return chunks
 
@@ -171,7 +202,12 @@ def get_video_encoder() -> tuple:
             capture_output=True, text=True, timeout=10
         )
         if "h264_nvenc" in result.stdout:
-            return "h264_nvenc", ["-cq", "23", "-preset", "p4"]
+            gpu = subprocess.run(
+                ["nvidia-smi"],
+                capture_output=True, text=True, timeout=5
+            )
+            if gpu.returncode == 0:
+                return "h264_nvenc", ["-cq", "23", "-preset", "p4"]
     except Exception:
         pass
     return "libx264", ["-crf", "23", "-preset", "ultrafast"]
@@ -187,8 +223,58 @@ def get_audio_duration(audio_path: str) -> float:
     return float(probe_data['format']['duration'])
 
 
+def extract_json_block(text: str):
+    """Extract the first JSON object or array from a model response."""
+    cleaned = (text or "").strip()
+    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*```$", "", cleaned)
+
+    obj_start = cleaned.find("{")
+    arr_start = cleaned.find("[")
+    starts = [pos for pos in (obj_start, arr_start) if pos != -1]
+    if not starts:
+        raise ValueError("Nenhum JSON encontrado na resposta do Gemini.")
+
+    start = min(starts)
+    closer = "}" if cleaned[start] == "{" else "]"
+    end = cleaned.rfind(closer) + 1
+    if end <= start:
+        raise ValueError("JSON incompleto na resposta do Gemini.")
+
+    json_str = cleaned[start:end]
+    json_str = re.sub(r",\s*([}\]])", r"\1", json_str)
+    return json.loads(json_str)
+
+
+def normalize_short_item(item: dict, index: int) -> dict:
+    """Keep the frontend contract stable even if the model omits optional fields."""
+    image_prompts = item.get("image_prompts") or []
+    parsed_prompts = []
+    for prompt in image_prompts:
+        if isinstance(prompt, dict):
+            parsed_prompts.append({
+                "cue": str(prompt.get("cue", "")).strip(),
+                "prompt": str(prompt.get("prompt", "")).strip(),
+            })
+        elif isinstance(prompt, str):
+            parsed_prompts.append({"cue": "", "prompt": prompt.strip()})
+
+    keywords = item.get("broll_keywords") or []
+    keywords = [str(k).strip() for k in keywords if str(k).strip()]
+
+    return {
+        "id": str(item.get("id") or f"short_{index + 1}"),
+        "title": str(item.get("title") or f"Short {index + 1}").strip(),
+        "hook": str(item.get("hook") or "").strip(),
+        "script": str(item.get("script") or "").strip(),
+        "cta": str(item.get("cta") or "").strip(),
+        "image_prompts": parsed_prompts,
+        "broll_keywords": keywords,
+    }
+
+
 def assemble_video(audio_path: str, asset_paths: list[str], output_path: str,
-                   job_id: str = None) -> bool:
+                   job_id: str = None, format: str = "long") -> bool:
     """
     Ken Burns Two-Pass video assembly.
 
@@ -198,6 +284,9 @@ def assemble_video(audio_path: str, asset_paths: list[str], output_path: str,
     Supports mixed assets: images (.jpg/.png) get Ken Burns, videos (.mp4/.mov) are used directly.
     """
     try:
+        is_short = format == "short"
+        out_w, out_h = (1080, 1920) if is_short else (1920, 1080)
+        work_w, work_h = (out_w * 2, out_h * 2)
         total_duration = get_audio_duration(audio_path)
         job_dir = os.path.dirname(output_path)
         encoder, enc_flags = get_video_encoder()
@@ -225,11 +314,20 @@ def assemble_video(audio_path: str, asset_paths: list[str], output_path: str,
 
             if ext in ('.mp4', '.mov', '.webm'):
                 # Video clip: trim to duration, re-encode to match format
+                if is_short:
+                    vf = (
+                        f"scale={out_w}:{out_h}:force_original_aspect_ratio=increase,"
+                        f"crop={out_w}:{out_h},setsar=1"
+                    )
+                else:
+                    vf = (
+                        f"scale={out_w}:{out_h}:force_original_aspect_ratio=decrease,"
+                        f"pad={out_w}:{out_h}:(ow-iw)/2:(oh-ih)/2,setsar=1"
+                    )
                 cmd = [
                     'ffmpeg', '-y', '-i', asset_path,
                     '-t', str(duration_per_asset),
-                    '-vf', f'scale=1920:1080:force_original_aspect_ratio=decrease,'
-                           f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1',
+                    '-vf', vf,
                     '-r', str(fps),
                     '-c:v', encoder, *enc_flags,
                     '-an', '-pix_fmt', 'yuv420p',
@@ -248,14 +346,24 @@ def assemble_video(audio_path: str, asset_paths: list[str], output_path: str,
                 # Duration in frames for zoompan
                 d_frames = int(duration_per_asset * fps)
 
-                # Scale up first (4x output), then zoompan downscales to 1920x1080
+                # Scale up first, then zoompan downscales to the final frame.
+                if is_short:
+                    base_filter = (
+                        f"scale={work_w}:{work_h}:force_original_aspect_ratio=increase,"
+                        f"crop={work_w}:{work_h},setsar=1,"
+                    )
+                else:
+                    base_filter = (
+                        f"scale={work_w}:{work_h}:force_original_aspect_ratio=decrease,"
+                        f"pad={work_w}:{work_h}:(ow-iw)/2:(oh-ih)/2,setsar=1,"
+                    )
+
                 vf_filter = (
-                    f"scale=8000:4500:force_original_aspect_ratio=decrease,"
-                    f"pad=8000:4500:(ow-iw)/2:(oh-ih)/2,setsar=1,"
-                    f"zoompan=z='{z_expr}'"
+                    base_filter
+                    + f"zoompan=z='{z_expr}'"
                     f":x='iw/2-(iw/zoom/2)'"
                     f":y='ih/2-(ih/zoom/2)'"
-                    f":d={d_frames}:s=1920x1080:fps={fps}"
+                    f":d={d_frames}:s={out_w}x{out_h}:fps={fps}"
                 )
 
                 cmd = [
@@ -690,6 +798,67 @@ def scriptify():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/shorts/scriptify", methods=["POST"])
+def shorts_scriptify():
+    """Gera roteiros curtos derivados do roteiro longo."""
+    data = request.json or {}
+    api_key = data.get("api_key", "").strip()
+    script = data.get("script", "").strip()
+
+    try:
+        count = int(data.get("count", 3))
+    except Exception:
+        count = 3
+    count = 2 if count == 2 else 3
+
+    try:
+        duration_seconds = int(data.get("duration_seconds", 60))
+    except Exception:
+        duration_seconds = 60
+    duration_seconds = 45 if duration_seconds == 45 else 60
+
+    if not api_key:
+        return jsonify({"error": "API Key do Gemini é obrigatória."}), 400
+    if len(script) < 500:
+        return jsonify({"error": "Roteiro longo muito curto para derivar Shorts."}), 400
+
+    try:
+        client = genai.Client(api_key=api_key)
+        prompt = (
+            f"Generate exactly {count} Shorts. Each must fit in {duration_seconds} seconds.\n\n"
+            f"LONG DOCUMENTARY SCRIPT:\n{script}"
+        )
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=SHORTS_SYSTEM_PROMPT,
+                temperature=0.65,
+            ),
+        )
+
+        parsed = extract_json_block(response.text)
+        raw_shorts = parsed if isinstance(parsed, list) else parsed.get("shorts", [])
+        shorts = [
+            normalize_short_item(item, i)
+            for i, item in enumerate(raw_shorts)
+            if isinstance(item, dict)
+        ][:count]
+
+        if not shorts:
+            return jsonify({"error": "O Gemini não retornou Shorts válidos."}), 500
+
+        return jsonify({
+            "shorts": shorts,
+            "count": len(shorts),
+            "duration_seconds": duration_seconds,
+        })
+
+    except Exception as e:
+        print(f"[ERROR] /shorts/scriptify: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/assemble", methods=["POST"])
 def assemble():
     """Monta um MP4 a partir de WAV + imagens/vídeos via FFmpeg (background task)."""
@@ -698,10 +867,19 @@ def assemble():
 
     audio_file = request.files.get("audio")
     image_files = request.files.getlist("images")
+    video_format = request.form.get("format", "long").strip().lower()
+    if video_format not in ("long", "short"):
+        return jsonify({"error": "Formato inválido. Use long ou short."}), 400
+
+    manifest_str = request.form.get("manifest", "[]")
+    try:
+        manifest = json.loads(manifest_str)
+    except Exception:
+        manifest = []
 
     if not audio_file:
         return jsonify({"error": "Arquivo de áudio (WAV) é obrigatório."}), 400
-    if not image_files:
+    if not image_files and not manifest:
         return jsonify({"error": "Pelo menos 1 imagem/vídeo é obrigatório."}), 400
     if len(image_files) > 50:
         return jsonify({"error": "Máximo de 50 assets permitidos."}), 400
@@ -728,12 +906,6 @@ def assemble():
     audio_path = os.path.join(job_dir, f"audio_{job_id}.wav")
     audio_file.save(audio_path)
 
-    # Parse manifest if provided (for mixed server/upload assets)
-    manifest_str = request.form.get("manifest", "[]")
-    try:
-        manifest = json.loads(manifest_str)
-    except Exception:
-        manifest = []
     if manifest and all(item.get("type") == "upload" for item in manifest):
         manifest = [
             item for _, item in sorted(
@@ -780,6 +952,9 @@ def assemble():
             f.save(path)
             asset_paths.append(path)
 
+    if not asset_paths:
+        return jsonify({"error": "Nenhum asset válido foi encontrado para montar o vídeo."}), 400
+
     output_path = os.path.join(job_dir, f"video_{job_id}.mp4")
 
     # ── Register job ──
@@ -787,6 +962,7 @@ def assemble():
         "status": "processing",
         "progress": 0.0,
         "output_path": output_path,
+        "format": video_format,
         "error": None,
         "created_at": time.time(),
     }
@@ -794,7 +970,10 @@ def assemble():
     # ── Background thread ──
     def run_job():
         try:
-            success = assemble_video(audio_path, asset_paths, output_path, job_id=job_id)
+            success = assemble_video(
+                audio_path, asset_paths, output_path,
+                job_id=job_id, format=video_format
+            )
             if success and os.path.exists(output_path):
                 JOBS[job_id]["status"] = "done"
                 JOBS[job_id]["progress"] = 1.0
@@ -847,7 +1026,7 @@ def assemble_download(job_id):
         job["output_path"],
         mimetype="video/mp4",
         as_attachment=True,
-        download_name="video_final.mp4"
+        download_name="short_final.mp4" if job.get("format") == "short" else "video_final.mp4"
     )
 
 
@@ -908,6 +1087,7 @@ if __name__ == "__main__":
     print("  POST /generate                → TTS curto, retorna WAV")
     print("  POST /generate-stream         → TTS longo com checkpointing + SSE")
     print("  POST /scriptify               → Roteirizar URL → Script + Image Prompts")
+    print("  POST /shorts/scriptify        → Roteiro longo → Shorts")
     print("  POST /assemble                → Montar vídeo (background task, retorna job_id)")
     print("  GET  /assemble/status/<id>    → Status + progresso do job")
     print("  GET  /assemble/download/<id>  → Download do MP4 finalizado")

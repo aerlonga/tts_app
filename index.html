@@ -591,6 +591,89 @@ textarea {
 .copy-prompt-btn.copied { color: var(--green); border-color: var(--green-dim); }
 
 /* ═══════════════════════════════════════════
+   SHORTS
+═══════════════════════════════════════════ */
+.shorts-toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.shorts-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.short-card {
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg2);
+  overflow: hidden;
+}
+
+.short-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(20,23,32,.55);
+}
+
+.short-kicker {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--amber);
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  white-space: nowrap;
+}
+
+.short-card-body { padding: 14px; }
+.short-title-input { margin-bottom: 10px; }
+.short-script { min-height: 170px; }
+
+.short-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+}
+
+.short-pill {
+  border: 1px solid var(--border2);
+  border-radius: 999px;
+  padding: 4px 8px;
+}
+
+.short-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.short-result {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.short-result video {
+  max-width: 260px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  background: #000;
+}
+
+/* ═══════════════════════════════════════════
    AUDIO / VIDEO RESULT
 ═══════════════════════════════════════════ */
 .media-result {
@@ -903,6 +986,8 @@ audio, video {
   .stage-body { padding: 20px 16px; }
   .stage-header { padding: 16px 20px; gap: 14px; }
   .stage-number { font-size: 38px; width: 32px; }
+  .shorts-toolbar { grid-template-columns: 1fr; }
+  .short-card-header { align-items: flex-start; flex-direction: column; }
 }
 </style>
 </head>
@@ -930,6 +1015,10 @@ audio, video {
     <a class="pipe-step" id="nav-4" href="#stage4" onclick="scrollToStage(4)">
       <span class="pipe-num">4</span>
       <span>Vídeo</span>
+    </a>
+    <a class="pipe-step" id="nav-5" href="#stage5" onclick="scrollToStage(5)">
+      <span class="pipe-num">5</span>
+      <span>Shorts</span>
     </a>
   </nav>
 </header>
@@ -1226,6 +1315,52 @@ audio, video {
         </a>
       </div>
 
+      <div id="hint4" style="display:none; margin-top:20px;">
+        <button class="next-hint" onclick="activateStage(5)">
+          ✓ Vídeo pronto — avançar para Shorts
+          <span>→</span>
+        </button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─── STAGE 5: SHORTS ─── -->
+  <section class="stage" id="stage5">
+    <div class="stage-header" onclick="toggleStage(5)">
+      <div class="stage-number">05</div>
+      <div class="stage-meta">
+        <div class="stage-title">SHORTS</div>
+        <div class="stage-desc">Roteiros verticais · TTS dedicado · Export MP4 1080x1920</div>
+      </div>
+      <div class="stage-badge badge-pending" id="badge-5">AGUARDANDO</div>
+    </div>
+    <div class="stage-body">
+
+      <div class="shorts-toolbar">
+        <div class="field" style="margin-bottom:0;">
+          <div class="field-label"><span>Quantidade</span></div>
+          <select id="shortsCount">
+            <option value="3" selected>3 Shorts</option>
+            <option value="2">2 Shorts</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <div class="field-label"><span>Duração alvo</span></div>
+          <select id="shortsDuration">
+            <option value="60" selected>60 segundos</option>
+            <option value="45">45 segundos</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="shortsBtn" onclick="runShortsScriptify()">
+          <div class="spin" id="shortsSpin" style="border-color:rgba(0,0,0,.2); border-top-color:#000;"></div>
+          Gerar Shorts
+        </button>
+      </div>
+
+      <div class="alert" id="shortsAlert"></div>
+      <div class="shorts-grid" id="shortsGrid"></div>
+
     </div>
   </section>
 
@@ -1257,6 +1392,7 @@ const state = {
   imagePrompts: [],
   sessionId: null,
   selectedAssets: [],  // Files from Media Library for /assemble
+  shorts: [],
 };
 
 /* ── Voices ── */
@@ -1294,7 +1430,7 @@ function selectVoice(id, el) {
 function activateStage(n) {
   state.activeStage = n;
 
-  for (let i = 1; i <= 4; i++) {
+  for (let i = 1; i <= 5; i++) {
     const sec = document.getElementById('stage' + i);
     const nav = document.getElementById('nav-' + i);
     if (sec) sec.classList.toggle('active-stage', i === n);
@@ -1911,6 +2047,7 @@ async function runAssemble() {
 
           setBadge(4, 'done', 'PRONTO');
           document.getElementById('nav-4').classList.add('done');
+          document.getElementById('hint4').style.display = 'block';
           showAlert('assembleAlert', '✓ Vídeo montado com sucesso!', 'success');
           setLoading('assembleBtn', 'assembleSpin', false);
 
@@ -1935,6 +2072,268 @@ function setAssembleProgress(pct, label) {
   document.getElementById('assembleProgressFill').style.width = pct + '%';
   document.getElementById('assembleProgressPct').textContent = Math.round(pct) + '%';
   document.getElementById('assembleProgressLabel').textContent = label;
+}
+
+/* ══════════════════════════════════════════
+   STAGE 5 — SHORTS
+══════════════════════════════════════════ */
+async function runShortsScriptify() {
+  const apiKey = getApiKey();
+  const script = document.getElementById('scriptText').value.trim()
+    || document.getElementById('ttsText').value.trim();
+  const count = Number(document.getElementById('shortsCount').value || 3);
+  const duration = Number(document.getElementById('shortsDuration').value || 60);
+
+  if (!apiKey) { showAlert('shortsAlert', '⚠ Insira a Gemini API Key na barra superior.', 'error'); return; }
+  if (script.length < 500) { showAlert('shortsAlert', '⚠ Gere ou cole um roteiro longo antes de criar Shorts.', 'error'); return; }
+
+  setLoading('shortsBtn', 'shortsSpin', true);
+  showAlert('shortsAlert', 'Gerando roteiros curtos a partir do documentário...', 'loading');
+  document.getElementById('shortsGrid').innerHTML = '';
+
+  try {
+    const res = await fetch('/shorts/scriptify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: apiKey,
+        script,
+        count,
+        duration_seconds: duration,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao gerar Shorts');
+
+    state.shorts = (data.shorts || []).map((item, i) => ({
+      ...item,
+      audioBlob: null,
+      audioUrl: null,
+      videoUrl: null,
+      sessionId: null,
+      index: i,
+    }));
+
+    renderShorts();
+    setBadge(5, 'active', 'SHORTS');
+    showAlert('shortsAlert', `✓ ${state.shorts.length} Shorts gerados. Edite os textos antes de narrar, se quiser.`, 'success');
+
+  } catch (e) {
+    showAlert('shortsAlert', '✗ ' + e.message, 'error');
+  } finally {
+    setLoading('shortsBtn', 'shortsSpin', false);
+  }
+}
+
+function renderShorts() {
+  const grid = document.getElementById('shortsGrid');
+  grid.innerHTML = state.shorts.map((short, i) => {
+    const prompts = (short.image_prompts || []).map((p, idx) => {
+      const cue = p.cue ? `${escHtml(p.cue)} — ` : '';
+      return `<div class="prompt-item">
+        <div class="prompt-num">${String(idx + 1).padStart(2, '0')}</div>
+        <div class="prompt-text">${cue}${escHtml(p.prompt || p)}</div>
+      </div>`;
+    }).join('');
+    const keywords = (short.broll_keywords || []).map(k => `<span class="short-pill">${escHtml(k)}</span>`).join('');
+    return `
+      <article class="short-card" id="shortCard-${i}">
+        <div class="short-card-header">
+          <div class="short-kicker">Short ${String(i + 1).padStart(2, '0')}</div>
+          <div style="font-family:var(--mono); font-size:10px; color:var(--text3);">9:16 · MP4 vertical</div>
+        </div>
+        <div class="short-card-body">
+          <input class="short-title-input" id="shortTitle-${i}" type="text"
+                 value="${escHtml(short.title || '')}"
+                 oninput="updateShortField(${i}, 'title', this.value)">
+          <textarea class="short-script" id="shortScript-${i}" rows="7"
+                    oninput="updateShortField(${i}, 'script', this.value)">${escHtml(short.script || '')}</textarea>
+          <div class="short-meta">
+            ${(short.hook ? `<span class="short-pill">Hook: ${escHtml(short.hook.slice(0, 70))}</span>` : '')}
+            ${(short.cta ? `<span class="short-pill">CTA: ${escHtml(short.cta.slice(0, 70))}</span>` : '')}
+            ${keywords}
+          </div>
+          ${prompts ? `<div class="prompts-panel show" style="margin-top:12px;"><div class="prompts-header"><span class="prompts-title">Prompts verticais</span></div><div class="prompts-list">${prompts}</div></div>` : ''}
+          <div class="short-actions">
+            <button class="btn btn-secondary btn-sm" id="shortAudioBtn-${i}" onclick="generateShortAudio(${i})">
+              <div class="spin" id="shortAudioSpin-${i}"></div>
+              Gerar áudio
+            </button>
+            <button class="btn btn-green btn-sm" id="shortVideoBtn-${i}" onclick="assembleShort(${i})">
+              <div class="spin" id="shortVideoSpin-${i}"></div>
+              Montar Short
+            </button>
+          </div>
+          <div class="alert" id="shortAlert-${i}"></div>
+          <div class="short-result" id="shortAudioResult-${i}" style="display:none;">
+            <div class="result-label">Áudio do Short</div>
+            <audio id="shortAudioPlayer-${i}" controls></audio>
+            <a class="download-link" id="shortAudioDownload-${i}" download="short_audio.wav">⬇ &nbsp;Baixar WAV</a>
+          </div>
+          <div class="short-result" id="shortVideoResult-${i}" style="display:none;">
+            <div class="result-label">Short Montado</div>
+            <video id="shortVideoPlayer-${i}" controls></video>
+            <a class="download-link" id="shortVideoDownload-${i}" download="short_final.mp4">⬇ &nbsp;Baixar MP4</a>
+          </div>
+        </div>
+      </article>`;
+  }).join('');
+}
+
+function updateShortField(index, field, value) {
+  if (!state.shorts[index]) return;
+  state.shorts[index][field] = value;
+}
+
+function syncShortFromDom(index) {
+  const short = state.shorts[index];
+  if (!short) return null;
+  short.title = document.getElementById(`shortTitle-${index}`).value.trim();
+  short.script = document.getElementById(`shortScript-${index}`).value.trim();
+  return short;
+}
+
+async function generateShortAudio(index) {
+  const apiKey = getApiKey();
+  const short = syncShortFromDom(index);
+  if (!apiKey) { showAlert(`shortAlert-${index}`, '⚠ Insira a Gemini API Key na barra superior.', 'error'); return; }
+  if (!short || !short.script) { showAlert(`shortAlert-${index}`, '⚠ O roteiro do Short está vazio.', 'error'); return; }
+
+  setLoading(`shortAudioBtn-${index}`, `shortAudioSpin-${index}`, true);
+  showAlert(`shortAlert-${index}`, 'Gerando áudio do Short...', 'loading');
+
+  try {
+    const sessionId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + `-short-${index}`;
+    const res = await fetch('/generate-stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: apiKey,
+        text: short.script,
+        voice: state.selectedVoice,
+        session_id: sessionId,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Erro desconhecido' }));
+      throw new Error(err.error || 'Erro na API');
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let audioB64 = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const raw of lines) {
+        const line = raw.startsWith('data: ') ? raw.slice(6) : raw;
+        if (!line.trim()) continue;
+        let evt;
+        try { evt = JSON.parse(line); } catch { continue; }
+        if (evt.type === 'progress') {
+          showAlert(`shortAlert-${index}`, `Narrando chunk ${evt.current}/${evt.total}...`, 'loading');
+        } else if (evt.type === 'error') {
+          showAlert(`shortAlert-${index}`, `Aviso no chunk ${evt.chunk}: ${evt.message}`, 'loading');
+        } else if (evt.type === 'done') {
+          audioB64 = evt.audio_b64;
+        }
+      }
+    }
+
+    if (!audioB64) throw new Error('Nenhum áudio recebido do servidor.');
+    const bytes = Uint8Array.from(atob(audioB64), c => c.charCodeAt(0));
+    short.audioBlob = new Blob([bytes], { type: 'audio/wav' });
+    short.audioUrl = URL.createObjectURL(short.audioBlob);
+
+    document.getElementById(`shortAudioPlayer-${index}`).src = short.audioUrl;
+    document.getElementById(`shortAudioDownload-${index}`).href = short.audioUrl;
+    document.getElementById(`shortAudioDownload-${index}`).download = `short_${index + 1}_audio.wav`;
+    document.getElementById(`shortAudioResult-${index}`).style.display = 'block';
+    showAlert(`shortAlert-${index}`, '✓ Áudio do Short gerado.', 'success');
+
+  } catch (e) {
+    showAlert(`shortAlert-${index}`, '✗ ' + e.message, 'error');
+  } finally {
+    setLoading(`shortAudioBtn-${index}`, `shortAudioSpin-${index}`, false);
+  }
+}
+
+async function assembleShort(index) {
+  const short = syncShortFromDom(index);
+  if (!short || !short.audioBlob) {
+    showAlert(`shortAlert-${index}`, '⚠ Gere o áudio deste Short antes de montar o vídeo.', 'error');
+    return;
+  }
+  if (!state.selectedAssets.length) {
+    showAlert(`shortAlert-${index}`, '⚠ Adicione imagens ou B-Rolls na etapa Media Library.', 'error');
+    return;
+  }
+
+  setLoading(`shortVideoBtn-${index}`, `shortVideoSpin-${index}`, true);
+  showAlert(`shortAlert-${index}`, 'Montando MP4 vertical 1080x1920...', 'loading');
+  document.getElementById(`shortVideoResult-${index}`).style.display = 'none';
+
+  try {
+    const form = new FormData();
+    const audioFile = new File([short.audioBlob], `short_${index + 1}.wav`, { type: 'audio/wav' });
+    form.append('audio', audioFile, audioFile.name);
+    form.append('format', 'short');
+
+    const uploadAssets = state.selectedAssets.filter(a => a.type === 'upload');
+    uploadAssets.forEach(a => form.append('images', a.file, a.file.name));
+    const manifest = state.selectedAssets.map(a => ({
+      type: a.type,
+      filename: a.filename,
+      path: a.path,
+    }));
+    form.append('manifest', JSON.stringify(manifest));
+
+    const res = await fetch('/assemble', { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro no servidor');
+
+    const jobId = data.job_id;
+    const poll = setInterval(async () => {
+      try {
+        const status = await fetch(`/assemble/status/${jobId}`).then(r => r.json());
+        showAlert(`shortAlert-${index}`, `Montando... ${Math.round((status.progress || 0) * 100)}%`, 'loading');
+
+        if (status.status === 'done') {
+          clearInterval(poll);
+          document.getElementById(`shortVideoDownload-${index}`).href = status.download_url;
+          document.getElementById(`shortVideoDownload-${index}`).download = `short_${index + 1}_final.mp4`;
+
+          const vidRes = await fetch(status.download_url);
+          const blob = await vidRes.blob();
+          short.videoUrl = URL.createObjectURL(blob);
+          document.getElementById(`shortVideoPlayer-${index}`).src = short.videoUrl;
+          document.getElementById(`shortVideoResult-${index}`).style.display = 'block';
+
+          setBadge(5, 'done', 'PRONTO');
+          document.getElementById('nav-5').classList.add('done');
+          showAlert(`shortAlert-${index}`, '✓ Short montado com sucesso.', 'success');
+          setLoading(`shortVideoBtn-${index}`, `shortVideoSpin-${index}`, false);
+
+        } else if (status.status === 'error') {
+          clearInterval(poll);
+          throw new Error(status.error || 'Erro durante montagem');
+        }
+      } catch (e) {
+        clearInterval(poll);
+        showAlert(`shortAlert-${index}`, '✗ ' + e.message, 'error');
+        setLoading(`shortVideoBtn-${index}`, `shortVideoSpin-${index}`, false);
+      }
+    }, 3000);
+
+  } catch (e) {
+    showAlert(`shortAlert-${index}`, '✗ ' + e.message, 'error');
+    setLoading(`shortVideoBtn-${index}`, `shortVideoSpin-${index}`, false);
+  }
 }
 
 /* ── Badge helper ── */

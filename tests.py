@@ -6,6 +6,7 @@ import math
 import struct
 import tempfile
 import json
+import subprocess
 from app import app, chunk_text, assemble_video, check_ffmpeg
 
 class TestTTSApp(unittest.TestCase):
@@ -62,7 +63,7 @@ class TestTTSApp(unittest.TestCase):
             img2 = os.path.join(tmpdir, "img2.jpg")
             
             # Gera mock de aúdio e imagens via Python local e FFMPEG 
-            generate_dummy_wav(wav_path, duration=2.0)
+            generate_dummy_wav(wav_path, duration=0.4)
             generate_dummy_image(img1)
             generate_dummy_image(img2)
             
@@ -79,6 +80,27 @@ class TestTTSApp(unittest.TestCase):
             self.assertTrue(res2)
             self.assertTrue(os.path.exists(out2))
             self.assertGreater(os.path.getsize(out2), 1000)
+
+            # Teste 3: Export vertical para Shorts
+            out3 = os.path.join(tmpdir, "short.mp4")
+            res3 = assemble_video(wav_path, [img1], out3, format="short")
+            self.assertTrue(res3)
+            self.assertTrue(os.path.exists(out3))
+            self.assertGreater(os.path.getsize(out3), 1000)
+
+            probe = subprocess.run(
+                [
+                    'ffprobe', '-v', 'error',
+                    '-select_streams', 'v:0',
+                    '-show_entries', 'stream=width,height',
+                    '-of', 'json',
+                    out3
+                ],
+                capture_output=True, text=True, timeout=30
+            )
+            dims = json.loads(probe.stdout)["streams"][0]
+            self.assertEqual(dims["width"], 1080)
+            self.assertEqual(dims["height"], 1920)
 
     @patch('app.genai.Client')
     @patch('newspaper.Article')  # Agora mockando corretamente de onde a biblioteca vem globalmente
@@ -105,6 +127,52 @@ class TestTTSApp(unittest.TestCase):
         data = response.get_json()
         self.assertEqual(data['script'], "Here is the generated script.")
         self.assertEqual(len(data['image_prompts']), 2)
+
+    @patch('app.genai.Client')
+    def test_6_shorts_scriptify_mocked(self, MockClient):
+        """Testa a geração de Shorts sem gastar tokens."""
+        mock_gemini_client = MagicMock()
+        MockClient.return_value = mock_gemini_client
+        mock_response = MagicMock()
+        mock_response.text = json.dumps({
+            "shorts": [
+                {
+                    "id": "short_1",
+                    "title": "The Spy Plane Nobody Could Catch",
+                    "hook": "This aircraft did not dodge missiles.",
+                    "script": "This aircraft did not dodge missiles. It outran them. Watch the full documentary for the whole story.",
+                    "cta": "Watch the full documentary for the whole story.",
+                    "image_prompts": [
+                        {"cue": "Opening", "prompt": "Vertical 9:16 black and white cinematic spy plane image"}
+                    ],
+                    "broll_keywords": ["SR-71", "Blackbird", "Cold War"]
+                },
+                {
+                    "id": "short_2",
+                    "title": "Fuel on the Runway",
+                    "hook": "Before takeoff, it leaked fuel.",
+                    "script": "Before takeoff, it leaked fuel. The full documentary explains why.",
+                    "cta": "Watch the full documentary.",
+                    "image_prompts": [],
+                    "broll_keywords": ["hangar", "runway"]
+                }
+            ]
+        })
+        mock_gemini_client.models.generate_content.return_value = mock_response
+
+        response = self.client.post('/shorts/scriptify', json={
+            'api_key': 'fake_key',
+            'script': 'This is a long documentary script about a declassified military aircraft. ' * 20,
+            'count': 2,
+            'duration_seconds': 60,
+        })
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data['count'], 2)
+        self.assertEqual(len(data['shorts']), 2)
+        self.assertEqual(data['shorts'][0]['image_prompts'][0]['cue'], "Opening")
+        self.assertEqual(data['shorts'][0]['broll_keywords'][0], "SR-71")
 
 if __name__ == '__main__':
     unittest.main()
