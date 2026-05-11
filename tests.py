@@ -170,14 +170,52 @@ class TestTTSApp(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.get_json()
         self.assertEqual(data['count'], 2)
+        self.assertEqual(data['duration_seconds'], 60)
         self.assertEqual(len(data['shorts']), 2)
         self.assertEqual(data['shorts'][0]['image_prompts'][0]['cue'], "Opening")
         self.assertEqual(data['shorts'][0]['broll_keywords'][0], "SR-71")
 
+    @patch('app.genai.Client')
+    def test_7_tiktok_shorts_duration_mocked(self, MockClient):
+        """Garante que a opção TikTok usa 65s e pede vídeo acima de 1 minuto."""
+        mock_gemini_client = MagicMock()
+        MockClient.return_value = mock_gemini_client
+        mock_response = MagicMock()
+        mock_response.text = json.dumps({
+            "shorts": [
+                {
+                    "id": "short_1",
+                    "title": "One Minute Spy Plane Story",
+                    "hook": "The mission almost failed before takeoff.",
+                    "script": "The mission almost failed before takeoff. This longer version gives the full setup, the danger, and the payoff before sending viewers to the full documentary.",
+                    "cta": "Watch the full documentary for the complete story.",
+                    "image_prompts": [],
+                    "broll_keywords": ["spy plane", "runway"]
+                }
+            ]
+        })
+        mock_gemini_client.models.generate_content.return_value = mock_response
+
+        response = self.client.post('/shorts/scriptify', json={
+            'api_key': 'fake_key',
+            'script': 'This is a long documentary script about a declassified military aircraft. ' * 20,
+            'count': 3,
+            'duration_seconds': 65,
+        })
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data['duration_seconds'], 65)
+        self.assertEqual(data['count'], 1)
+
+        sent_prompt = mock_gemini_client.models.generate_content.call_args.kwargs['contents']
+        self.assertIn('Platform: TikTok Creator Rewards.', sent_prompt)
+        self.assertIn('between 61 and 65 seconds', sent_prompt)
+
     @patch('app.time.sleep')
     @patch('app.chunk_text')
     @patch('app.genai.Client')
-    def test_7_generate_stream_waits_between_new_chunks(self, MockClient, mock_chunk_text, mock_sleep):
+    def test_8_generate_stream_waits_between_new_chunks(self, MockClient, mock_chunk_text, mock_sleep):
         """Garante chunking maior e throttling SSE entre chunks gerados."""
         mock_chunk_text.return_value = [
             "First chunk with enough content to synthesize.",

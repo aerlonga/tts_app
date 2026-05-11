@@ -799,10 +799,22 @@ audio, video {
   flex-shrink: 0;
 }
 
-.thumb-wrap img {
+.thumb-wrap img,
+.thumb-wrap video {
   width: 100%; height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.thumb-kind {
+  position: absolute;
+  top: 2px; right: 3px;
+  font-family: var(--mono);
+  font-size: 8px;
+  color: rgba(255,255,255,.8);
+  background: rgba(0,0,0,.55);
+  padding: 1px 3px;
+  border-radius: 2px;
 }
 
 .thumb-num {
@@ -1196,7 +1208,7 @@ audio, video {
           🎬 Buscar B-Roll
         </button>
         <button class="btn btn-ghost" id="tabImages" onclick="switchMediaTab('images')" style="border:none; border-bottom:2px solid transparent; border-radius:0;">
-          🖼 Minhas Imagens
+          🖼 Minhas Mídias
         </button>
       </div>
 
@@ -1229,18 +1241,18 @@ audio, video {
         </div>
       </div>
 
-      <!-- Tab: Image Upload -->
+      <!-- Tab: Media Upload -->
       <div id="imagesTab" style="display:none;">
         <div class="field">
           <div class="field-label">
-            <span>Imagens (.jpg / .png)</span>
-            <small id="imgCount">0 / 50 imagens</small>
+            <span>Mídias (.jpg / .png / .mp4 / .mov / .webm)</span>
+            <small id="imgCount">0 / 50 mídias</small>
           </div>
           <div class="file-drop" id="imgDrop">
-            <input type="file" id="imageFiles" accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+            <input type="file" id="imageFiles" accept=".jpg,.jpeg,.png,.mp4,.mov,.webm,image/jpeg,image/png,video/mp4,video/quicktime,video/webm"
                    multiple onchange="onImageFiles(this)">
             <div class="file-drop-label" id="imgDropLabel">
-              <strong>Clique</strong> ou arraste as imagens (máx 50)
+              <strong>Clique</strong> ou arraste imagens e vídeos (máx 50)
             </div>
           </div>
           <div class="image-previews" id="imagePreviews"></div>
@@ -1348,8 +1360,9 @@ audio, video {
         <div class="field" style="margin-bottom:0;">
           <div class="field-label"><span>Duração alvo</span></div>
           <select id="shortsDuration">
-            <option value="60" selected>60 segundos</option>
-            <option value="45">45 segundos</option>
+            <option value="60" selected>YouTube Shorts · 60 segundos</option>
+            <option value="45">YouTube Shorts · 45 segundos</option>
+            <option value="65">TikTok Rewards · 65 segundos</option>
           </select>
         </div>
         <button class="btn btn-primary" id="shortsBtn" onclick="runShortsScriptify()">
@@ -1909,6 +1922,12 @@ function compareNaturalAssets(a, b) {
   return ka.fallbackIndex - kb.fallbackIndex;
 }
 
+function isVideoAsset(fileOrName) {
+  const name = typeof fileOrName === 'string' ? fileOrName : (fileOrName?.name || '');
+  const type = typeof fileOrName === 'string' ? '' : (fileOrName?.type || '');
+  return type.startsWith('video/') || /\.(mp4|mov|webm)$/i.test(name);
+}
+
 function onImageFiles(input) {
   const files = Array.from(input.files)
     .map((file, fallbackIndex) => ({ file, name: file.name, fallbackIndex }))
@@ -1925,16 +1944,17 @@ function onImageFiles(input) {
       type: 'upload',
       filename: f.name,
       file: f,
-      name: f.name
+      name: f.name,
+      mediaKind: isVideoAsset(f) ? 'video' : 'image'
     });
   });
   
-  document.getElementById('imgCount').textContent = `${files.length} / 50 imagens`;
+  document.getElementById('imgCount').textContent = `${files.length} / 50 mídias`;
 
   const label = document.getElementById('imgDropLabel');
   label.innerHTML = files.length
-    ? `<strong style="color:var(--green)">✓ ${files.length} imagens selecionadas</strong>`
-    : '<strong>Clique</strong> ou arraste as imagens (máx 50)';
+    ? `<strong style="color:var(--green)">✓ ${files.length} mídias selecionadas</strong>`
+    : '<strong>Clique</strong> ou arraste imagens e vídeos (máx 50)';
 
   const strip = document.getElementById('imagePreviews');
   strip.innerHTML = '';
@@ -1942,7 +1962,11 @@ function onImageFiles(input) {
     const url  = URL.createObjectURL(f);
     const wrap = document.createElement('div');
     wrap.className = 'thumb-wrap';
-    wrap.innerHTML = `<img src="${url}" alt="img ${i+1}"><div class="thumb-num">${i+1}</div>`;
+    if (isVideoAsset(f)) {
+      wrap.innerHTML = `<video src="${url}" muted playsinline preload="metadata"></video><div class="thumb-kind">VID</div><div class="thumb-num">${i+1}</div>`;
+    } else {
+      wrap.innerHTML = `<img src="${url}" alt="asset ${i+1}"><div class="thumb-kind">IMG</div><div class="thumb-num">${i+1}</div>`;
+    }
     strip.appendChild(wrap);
   });
 
@@ -1964,7 +1988,9 @@ function updateAssetList() {
   
   document.getElementById('assetCount').textContent = `${state.selectedAssets.length} assets`;
   list.innerHTML = state.selectedAssets.map((a, i) => {
-    const icon = a.type === 'upload' ? '🖼' : '🎬';
+    const icon = a.type === 'upload'
+      ? (a.mediaKind === 'video' || isVideoAsset(a.filename || a.name) ? '🎞' : '🖼')
+      : '🎬';
     return `<div style="padding:3px 0;">${String(i+1).padStart(2,'0')}. ${icon} ${escHtml(a.name)}</div>`;
   }).join('');
   

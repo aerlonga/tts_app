@@ -84,16 +84,16 @@ OUTPUT FORMAT:
 ]
 """
 
-SHORTS_SYSTEM_PROMPT = """You are a senior YouTube Shorts scriptwriter for an American channel focused on military history, dark historical events, declassified programs, and geopolitical conflict.
+SHORTS_SYSTEM_PROMPT = """You are a senior vertical video scriptwriter for an American channel focused on military history, dark historical events, declassified programs, and geopolitical conflict.
 
 Your task: derive short-form vertical video scripts from a long documentary script.
 
 RULES:
 1. Write ONLY in English.
 2. Return ONLY valid JSON. No markdown, no explanations, no code fences.
-3. Generate exactly the requested number of Shorts.
-4. Each Short must fit within the requested duration.
-5. Each Short must feel like a self-contained discovery hook, not a random excerpt.
+3. Generate exactly the requested number of vertical videos.
+4. Follow the requested platform and duration window exactly.
+5. Each vertical video must feel like a self-contained discovery hook, not a random excerpt.
 6. Keep the tone dark, cinematic, factual, and serious.
 7. Start each script with a strong hook in the first sentence.
 8. End each script with a short CTA that points viewers to the full documentary.
@@ -837,7 +837,14 @@ def shorts_scriptify():
         duration_seconds = int(data.get("duration_seconds", 60))
     except Exception:
         duration_seconds = 60
-    duration_seconds = 45 if duration_seconds == 45 else 60
+    duration_seconds = duration_seconds if duration_seconds in (45, 60, 65) else 60
+    platform = "TikTok Creator Rewards" if duration_seconds == 65 else "YouTube Shorts"
+    duration_rule = (
+        "Each TikTok script must be long enough for a final narrated video between 61 and 65 seconds. "
+        "Do not make it shorter than 61 seconds."
+        if duration_seconds == 65
+        else f"Each YouTube Shorts script must fit safely within {duration_seconds} seconds."
+    )
 
     if not api_key:
         return jsonify({"error": "API Key do Gemini é obrigatória."}), 400
@@ -847,7 +854,9 @@ def shorts_scriptify():
     try:
         client = genai.Client(api_key=api_key)
         prompt = (
-            f"Generate exactly {count} Shorts. Each must fit in {duration_seconds} seconds.\n\n"
+            f"Platform: {platform}.\n"
+            f"Generate exactly {count} vertical videos.\n"
+            f"{duration_rule}\n\n"
             f"LONG DOCUMENTARY SCRIPT:\n{script}"
         )
         response = client.models.generate_content(
@@ -915,8 +924,10 @@ def assemble():
     # Validar imagens/vídeos
     valid_image_types = ("image/jpeg", "image/png")
     valid_video_types = ("video/mp4", "video/quicktime", "video/webm")
+    valid_asset_exts = (".jpg", ".jpeg", ".png", ".mp4", ".mov", ".webm")
     for img in image_files:
-        if img.mimetype not in valid_image_types + valid_video_types:
+        filename = (img.filename or "").lower()
+        if img.mimetype not in valid_image_types + valid_video_types and not filename.endswith(valid_asset_exts):
             return jsonify({"error": f"Arquivo inválido: {img.filename}. Aceitos: JPG, PNG, MP4, MOV, WebM."}), 400
 
     # ── Create job directory ──
