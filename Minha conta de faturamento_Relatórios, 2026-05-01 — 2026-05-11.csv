@@ -1,0 +1,14 @@
+Descrição do serviço,ID do serviço,Descrição da SKU,Código SKU,Quantidade de uso,Unidade de uso,Custo (R$),Programas de economia (R$),Outras economias (R$),Subtotal não arredondado (R$),Subtotal (R$),Mudança percentual no subtotal em comparação ao período anterior
+Gemini API,AEFD-7695-64FA,Generate_content cached text input token count for gemini 3 flash,07D6-73CA-C859,6.093,count,"0,00","0,00","- 0,00","0,000000","0,00",Novo
+Gemini API,AEFD-7695-64FA,Generate content cached input token count gemini 2.5 flash input short text,5CDC-4C82-2AEC,1.002,count,"0,00","0,00","- 0,00","0,000000","0,00",Novo
+Gemini API,AEFD-7695-64FA,GenerateContent audio output token count for Gemini 2.0 Flash TTS,6D92-ABB7-8F5A,47.760,count,"2,71","0,00","- 2,71","0,000000","0,00",0%
+Gemini API,AEFD-7695-64FA,Generate content output token count gemini 2.5 flash short input text,911A-8880-A243,162.390,count,"2,30","0,00","- 2,30","0,000000","0,00",0%
+Gemini API,AEFD-7695-64FA,Generate content input token count gemini 2.5 flash short input text,981A-C057-0BF9,126.516,count,"0,22","0,00","- 0,22","0,000000","0,00",0%
+Gemini API,AEFD-7695-64FA,Generate_content text output token count for gemini 3 flash,ACA6-865B-F153,20.981,count,"0,36","0,00","- 0,36","0,000000","0,00",0%
+Gemini API,AEFD-7695-64FA,Generate_content text input token count for Gemini 3.1 flash tts,B8F5-B8FF-FBEF,10.325,count,"0,06","0,00","- 0,06","0,000000","0,00",Novo
+Gemini API,AEFD-7695-64FA,Generate_content audio output token count for Gemini 3.1 flash tts,C137-3F2E-D091,97.752,count,"11,10","0,00","- 11,10","0,000000","0,00",Novo
+Gemini API,AEFD-7695-64FA,Generate_content text input token count for gemini 3 flash,F2C1-F842-5D84,12.017,count,"0,03","0,00","- 0,03","0,000000","0,00",0%
+Gemini API,AEFD-7695-64FA,GenerateContent text input token count for Gemini 2.0 Flash TTS,F4E4-40E9-745E,7.456,count,"0,02","0,00","- 0,02","0,000000","0,00",0%
+,,,,,,,,Subtotal,"0,000000","0,00"
+,,,,,,,,Tributo,"0,000000","0,00"
+,,,,,,,,Total filtrado,"0,000000","0,00"
