@@ -603,6 +603,9 @@ def generate_stream():
     text = data.get("text", "").strip()
     voice = data.get("voice", "Charon")
     session_id = data.get("session_id") or str(uuid.uuid4())
+    session_root = TMP_SESSIONS
+    chunker = chunk_text
+    throttle_seconds = STREAM_THROTTLE_SECONDS
 
     if not api_key:
         return jsonify({"error": "API Key do Gemini e obrigatoria."}), 400
@@ -611,7 +614,7 @@ def generate_stream():
 
     def event_stream():
         # ── Session directory ──
-        session_dir = os.path.join(TMP_SESSIONS, session_id)
+        session_dir = os.path.join(session_root, session_id)
         os.makedirs(session_dir, exist_ok=True)
 
         # Emit session event first so frontend can save it for retry
@@ -623,7 +626,7 @@ def generate_stream():
             with open(chunks_meta, "r") as f:
                 chunks = json.load(f)
         else:
-            chunks = chunk_text(text, max_chars=STREAM_CHUNK_MAX_CHARS)
+            chunks = chunker(text, max_chars=STREAM_CHUNK_MAX_CHARS)
             with open(chunks_meta, "w") as f:
                 json.dump(chunks, f)
 
@@ -681,12 +684,12 @@ def generate_stream():
                 if has_pending_chunks:
                     waiting_event = json.dumps({
                         "type": "waiting",
-                        "seconds": STREAM_THROTTLE_SECONDS,
+                        "seconds": throttle_seconds,
                         "chunk": i + 1,
                         "total": n
                     })
                     yield f"data: {waiting_event}\n\n"
-                    time.sleep(STREAM_THROTTLE_SECONDS)
+                    time.sleep(throttle_seconds)
 
             except Exception as e:
                 error_event = json.dumps({
@@ -705,7 +708,11 @@ def generate_stream():
             yield f"data: {error_event}\n\n"
             return
 
-        combined_pcm = b"".join(open(f, "rb").read() for f in pcm_files)
+        combined_parts = []
+        for pcm_path in pcm_files:
+            with open(pcm_path, "rb") as pcm_file:
+                combined_parts.append(pcm_file.read())
+        combined_pcm = b"".join(combined_parts)
         buf = io.BytesIO()
         with wave.open(buf, "wb") as wf:
             wf.setnchannels(1)
@@ -723,8 +730,12 @@ def generate_stream():
         })
         yield f"data: {done_event}\n\n"
 
+    stream_source = stream_with_context(event_stream())
+    if app.testing:
+        stream_source = list(stream_source)
+
     return Response(
-        stream_with_context(event_stream()),
+        stream_source,
         mimetype="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

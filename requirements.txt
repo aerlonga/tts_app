@@ -1,6 +1,16 @@
+fastapi>=0.115.0
 flask>=3.0.0
 google-genai>=1.0.0
 newspaper3k==0.2.8
 lxml
 lxml_html_clean
 nltk
+alembic>=1.13.0
+pgvector>=0.3.0
+psycopg2-binary>=2.9.9
+pydantic-settings>=2.6.0
+python-dotenv>=1.0.0
+python-multipart>=0.0.9
+requests>=2.31.0
+SQLAlchemy>=2.0.0
+uvicorn>=0.32.0

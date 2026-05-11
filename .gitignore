@@ -51,3 +51,5 @@ htmlcov/
 output/
 logs/
 *.log
+storage/*.db
+storage/*.sqlite*
