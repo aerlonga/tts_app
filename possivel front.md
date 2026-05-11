@@ -591,89 +591,6 @@ textarea {
 .copy-prompt-btn.copied { color: var(--green); border-color: var(--green-dim); }
 
 /* ═══════════════════════════════════════════
-   SHORTS
-═══════════════════════════════════════════ */
-.shorts-toolbar {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(160px, 1fr)) auto;
-  gap: 12px;
-  align-items: end;
-}
-
-.shorts-grid {
-  display: grid;
-  gap: 14px;
-  margin-top: 18px;
-}
-
-.short-card {
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  background: var(--bg2);
-  overflow: hidden;
-}
-
-.short-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
-  background: rgba(20,23,32,.55);
-}
-
-.short-kicker {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--amber);
-  text-transform: uppercase;
-  letter-spacing: 1.4px;
-  white-space: nowrap;
-}
-
-.short-card-body { padding: 14px; }
-.short-title-input { margin-bottom: 10px; }
-.short-script { min-height: 170px; }
-
-.short-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 10px 0 12px;
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--text3);
-}
-
-.short-pill {
-  border: 1px solid var(--border2);
-  border-radius: 999px;
-  padding: 4px 8px;
-}
-
-.short-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.short-result {
-  margin-top: 14px;
-  border-top: 1px solid var(--border);
-  padding-top: 14px;
-}
-
-.short-result video {
-  max-width: 260px;
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-  background: #000;
-}
-
-/* ═══════════════════════════════════════════
    AUDIO / VIDEO RESULT
 ═══════════════════════════════════════════ */
 .media-result {
@@ -799,22 +716,10 @@ audio, video {
   flex-shrink: 0;
 }
 
-.thumb-wrap img,
-.thumb-wrap video {
+.thumb-wrap img {
   width: 100%; height: 100%;
   object-fit: cover;
   display: block;
-}
-
-.thumb-kind {
-  position: absolute;
-  top: 2px; right: 3px;
-  font-family: var(--mono);
-  font-size: 8px;
-  color: rgba(255,255,255,.8);
-  background: rgba(0,0,0,.55);
-  padding: 1px 3px;
-  border-radius: 2px;
 }
 
 .thumb-num {
@@ -885,6 +790,7 @@ audio, video {
 
 /* Next step hint */
 .next-hint {
+  display: none;
   margin-top: 20px;
   padding: 12px 16px;
   background: var(--green-dim);
@@ -895,91 +801,12 @@ audio, video {
   color: var(--green);
   cursor: pointer;
   transition: background .2s;
+  display: flex;
   align-items: center;
   justify-content: space-between;
 }
 .next-hint:hover { background: rgba(45,184,122,.15); }
 .next-hint span { opacity: .6; }
-
-
-/* ═══════════════════════════════════════════
-   TOGGLE SWITCH
-═══════════════════════════════════════════ */
-.toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 0 14px 0;
-  border-top: 1px solid var(--border);
-  margin-top: 4px;
-}
-
-.toggle-label {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.toggle-label span {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-
-.toggle-label small {
-  font-size: 10px;
-  color: var(--text3);
-  font-family: var(--mono);
-}
-
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 42px;
-  height: 24px;
-  flex-shrink: 0;
-}
-
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
-  inset: 0;
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 24px;
-  cursor: pointer;
-  transition: background .2s, border-color .2s;
-}
-
-.slider::before {
-  content: '';
-  position: absolute;
-  left: 3px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--text3);
-  transition: left .2s, background .2s;
-}
-
-.switch input:checked+.slider {
-  background: var(--amber-dim);
-  border-color: var(--amber);
-}
-
-.switch input:checked+.slider::before {
-  left: 21px;
-  background: var(--amber);
-}
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -998,8 +825,6 @@ audio, video {
   .stage-body { padding: 20px 16px; }
   .stage-header { padding: 16px 20px; gap: 14px; }
   .stage-number { font-size: 38px; width: 32px; }
-  .shorts-toolbar { grid-template-columns: 1fr; }
-  .short-card-header { align-items: flex-start; flex-direction: column; }
 }
 </style>
 </head>
@@ -1022,15 +847,7 @@ audio, video {
     </a>
     <a class="pipe-step" id="nav-3" href="#stage3" onclick="scrollToStage(3)">
       <span class="pipe-num">3</span>
-      <span>Media</span>
-    </a>
-    <a class="pipe-step" id="nav-4" href="#stage4" onclick="scrollToStage(4)">
-      <span class="pipe-num">4</span>
       <span>Vídeo</span>
-    </a>
-    <a class="pipe-step" id="nav-5" href="#stage5" onclick="scrollToStage(5)">
-      <span class="pipe-num">5</span>
-      <span>Shorts</span>
     </a>
   </nav>
 </header>
@@ -1136,20 +953,6 @@ audio, video {
                   oninput="updateTtsCount()"></textarea>
       </div>
 
-      
-      <div class="field">
-        <div class="toggle-row">
-          <div class="toggle-label">
-            <span>Entonacao Inteligente</span>
-            <small>Gemini adiciona marcacoes de entonacao antes de gerar o audio</small>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="enhanceToggle" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
-
       <button class="btn btn-primary" id="ttsBtn" onclick="runTTS()">
         <div class="spin" id="ttsSpin" style="border-color:rgba(0,0,0,.2); border-top-color:#000;"></div>
         🎙 Gerar Áudio Longo
@@ -1182,7 +985,7 @@ audio, video {
 
       <div id="hint2" style="display:none; margin-top:20px;">
         <button class="next-hint" onclick="activateStage(3)">
-          ✓ Áudio pronto — avançar para Media Library
+          ✓ Áudio pronto — avançar para Montagem de Vídeo
           <span>→</span>
         </button>
       </div>
@@ -1190,104 +993,20 @@ audio, video {
     </div>
   </section>
 
-  <!-- ─── STAGE 3: MEDIA LIBRARY ─── -->
+  <!-- ─── STAGE 3: VÍDEO ─── -->
   <section class="stage" id="stage3">
     <div class="stage-header" onclick="toggleStage(3)">
       <div class="stage-number">03</div>
       <div class="stage-meta">
-        <div class="stage-title">MEDIA LIBRARY</div>
-        <div class="stage-desc">B-Roll archive.org · Upload de imagens · Assets mistos para vídeo</div>
+        <div class="stage-title">MONTAGEM DE VÍDEO</div>
+        <div class="stage-desc">FFmpeg local · Slideshow com crossfade · Export MP4 1080p</div>
       </div>
       <div class="stage-badge badge-pending" id="badge-3">AGUARDANDO</div>
     </div>
     <div class="stage-body">
 
-      <!-- Tab switcher -->
-      <div style="display:flex; gap:0; margin-bottom:20px; border-bottom:1px solid var(--border);">
-        <button class="btn btn-ghost" id="tabBroll" onclick="switchMediaTab('broll')" style="border:none; border-bottom:2px solid var(--amber); border-radius:0; color:var(--amber);">
-          🎬 Buscar B-Roll
-        </button>
-        <button class="btn btn-ghost" id="tabImages" onclick="switchMediaTab('images')" style="border:none; border-bottom:2px solid transparent; border-radius:0;">
-          🖼 Minhas Mídias
-        </button>
-      </div>
-
-      <!-- Tab: B-Roll Search -->
-      <div id="brollTab">
-        <div class="row" style="margin-bottom:12px;">
-          <div class="field" style="flex:2;">
-            <div class="field-label"><span>Palavras-chave</span></div>
-            <input type="text" id="brollKeywords" placeholder="SR-71, Blackbird, Lockheed">
-          </div>
-          <div class="field" style="flex:1;">
-            <div class="field-label"><span>Coleção</span></div>
-            <select id="brollCollection">
-              <option value="prelinger">Prelinger Archives</option>
-              <option value="nasa">NASA</option>
-              <option value="national-archives">National Archives</option>
-            </select>
-          </div>
-        </div>
-        <button class="btn btn-secondary" id="brollSearchBtn" onclick="searchBroll()">
-          <div class="spin" id="brollSpin"></div>
-          🔍 Pesquisar
-        </button>
-        <div class="alert" id="brollAlert"></div>
-
-        <!-- B-Roll results grid -->
-        <div id="brollResults" style="display:none; margin-top:16px;">
-          <div class="field-label"><span>Resultados</span><small id="brollCount">0 clips</small></div>
-          <div id="brollGrid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:10px; margin-top:8px;"></div>
-        </div>
-      </div>
-
-      <!-- Tab: Media Upload -->
-      <div id="imagesTab" style="display:none;">
-        <div class="field">
-          <div class="field-label">
-            <span>Mídias (.jpg / .png / .mp4 / .mov / .webm)</span>
-            <small id="imgCount">0 / 50 mídias</small>
-          </div>
-          <div class="file-drop" id="imgDrop">
-            <input type="file" id="imageFiles" accept=".jpg,.jpeg,.png,.mp4,.mov,.webm,image/jpeg,image/png,video/mp4,video/quicktime,video/webm"
-                   multiple onchange="onImageFiles(this)">
-            <div class="file-drop-label" id="imgDropLabel">
-              <strong>Clique</strong> ou arraste imagens e vídeos (máx 50)
-            </div>
-          </div>
-          <div class="image-previews" id="imagePreviews"></div>
-        </div>
-      </div>
-
-      <!-- Unified asset list -->
-      <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:16px;">
-        <div class="field-label"><span>Assets selecionados</span><small id="assetCount">0 assets</small></div>
-        <div id="assetList" style="margin-top:8px; font-family:var(--mono); font-size:11px; color:var(--text3);"></div>
-      </div>
-
-      <div id="hint3" style="display:none; margin-top:20px;">
-        <button class="next-hint" onclick="activateStage(4)">
-          ✓ Assets prontos — avançar para Montagem de Vídeo
-          <span>→</span>
-        </button>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ─── STAGE 4: VÍDEO ─── -->
-  <section class="stage" id="stage4">
-    <div class="stage-header" onclick="toggleStage(4)">
-      <div class="stage-number">04</div>
-      <div class="stage-meta">
-        <div class="stage-title">MONTAGEM DE VÍDEO</div>
-        <div class="stage-desc">FFmpeg · Ken Burns Two-Pass · NVENC GPU · Export MP4 1080p</div>
-      </div>
-      <div class="stage-badge badge-pending" id="badge-4">AGUARDANDO</div>
-    </div>
-    <div class="stage-body">
-
       <div class="row" style="margin-bottom:20px; align-items:flex-start;">
+
         <!-- Audio file -->
         <div class="field" style="flex:1; min-width:220px;">
           <div class="field-label"><span>Arquivo de Áudio (.wav)</span></div>
@@ -1298,23 +1017,28 @@ audio, video {
             </div>
           </div>
         </div>
+
+        <!-- Images -->
+        <div class="field" style="flex:2; min-width:280px;">
+          <div class="field-label">
+            <span>Imagens (.jpg / .png)</span>
+            <small id="imgCount">0 / 20 imagens</small>
+          </div>
+          <div class="file-drop" id="imgDrop">
+            <input type="file" id="imageFiles" accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                   multiple onchange="onImageFiles(this)">
+            <div class="file-drop-label" id="imgDropLabel">
+              <strong>Clique</strong> ou arraste as imagens (máx 20)
+            </div>
+          </div>
+          <div class="image-previews" id="imagePreviews"></div>
+        </div>
       </div>
 
       <button class="btn btn-primary" id="assembleBtn" onclick="runAssemble()">
         <div class="spin" id="assembleSpin" style="border-color:rgba(0,0,0,.2); border-top-color:#000;"></div>
         🎬 Montar Vídeo
       </button>
-
-      <!-- Assembly progress -->
-      <div class="progress-wrap" id="assembleProgress">
-        <div class="progress-header">
-          <span class="progress-label" id="assembleProgressLabel">Aguardando...</span>
-          <span class="progress-pct" id="assembleProgressPct">0%</span>
-        </div>
-        <div class="progress-track">
-          <div class="progress-fill" id="assembleProgressFill"></div>
-        </div>
-      </div>
 
       <div class="alert" id="assembleAlert"></div>
 
@@ -1327,67 +1051,10 @@ audio, video {
         </a>
       </div>
 
-      <div id="hint4" style="display:none; margin-top:20px;">
-        <button class="next-hint" onclick="activateStage(5)">
-          ✓ Vídeo pronto — avançar para Shorts
-          <span>→</span>
-        </button>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ─── STAGE 5: SHORTS ─── -->
-  <section class="stage" id="stage5">
-    <div class="stage-header" onclick="toggleStage(5)">
-      <div class="stage-number">05</div>
-      <div class="stage-meta">
-        <div class="stage-title">SHORTS</div>
-        <div class="stage-desc">Roteiros verticais · TTS dedicado · Export MP4 1080x1920</div>
-      </div>
-      <div class="stage-badge badge-pending" id="badge-5">AGUARDANDO</div>
-    </div>
-    <div class="stage-body">
-
-      <div class="shorts-toolbar">
-        <div class="field" style="margin-bottom:0;">
-          <div class="field-label"><span>Quantidade</span></div>
-          <select id="shortsCount">
-            <option value="3" selected>3 Shorts</option>
-            <option value="2">2 Shorts</option>
-          </select>
-        </div>
-        <div class="field" style="margin-bottom:0;">
-          <div class="field-label"><span>Duração alvo</span></div>
-          <select id="shortsDuration">
-            <option value="60" selected>YouTube Shorts · 60 segundos</option>
-            <option value="45">YouTube Shorts · 45 segundos</option>
-            <option value="65">TikTok Rewards · 65 segundos</option>
-          </select>
-        </div>
-        <button class="btn btn-primary" id="shortsBtn" onclick="runShortsScriptify()">
-          <div class="spin" id="shortsSpin" style="border-color:rgba(0,0,0,.2); border-top-color:#000;"></div>
-          Gerar Shorts
-        </button>
-      </div>
-
-      <div class="alert" id="shortsAlert"></div>
-      <div class="shorts-grid" id="shortsGrid"></div>
-
     </div>
   </section>
 
 </main>
-
-<!-- ─── PREVIEW MODAL ─── -->
-<div id="previewModal" class="modal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.9); align-items:center; justify-content:center;">
-  <div style="position:relative; width:80%; max-width:800px; background:#000; border:1px solid var(--border);">
-    <button onclick="closePreview()" style="position:absolute; right:-40px; top:-40px; background:none; border:none; color:#fff; font-size:30px; cursor:pointer;">&times;</button>
-    <div style="padding-top:56.25%; position:relative;">
-      <iframe id="previewIframe" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;" allowfullscreen></iframe>
-    </div>
-  </div>
-</div>
 
 <!-- ═══════════════════════════════════════════
      JAVASCRIPT
@@ -1403,9 +1070,6 @@ const state = {
   audioBlob: null,
   selectedVoice: 'charon',
   imagePrompts: [],
-  sessionId: null,
-  selectedAssets: [],  // Files from Media Library for /assemble
-  shorts: [],
 };
 
 /* ── Voices ── */
@@ -1418,9 +1082,6 @@ const VOICES = [
   { id: 'kore',      label: 'Kore',      desc: 'Firme' },
   { id: 'alnilam',   label: 'Alnilam',   desc: 'Nova ✦' },
   { id: 'enceladus', label: 'Enceladus', desc: 'Nova ✦' },
-  { id: 'gacrux', label: 'gacrux', desc: 'Nova ✦' },
-  { id: 'umbriel', label: 'umbriel', desc: 'Nova ✦' },
-  { id: 'schedar', label: 'schedar', desc: 'Nova ✦' },
 ];
 
 function buildVoiceGrid() {
@@ -1443,11 +1104,11 @@ function selectVoice(id, el) {
 function activateStage(n) {
   state.activeStage = n;
 
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 3; i++) {
     const sec = document.getElementById('stage' + i);
     const nav = document.getElementById('nav-' + i);
-    if (sec) sec.classList.toggle('active-stage', i === n);
-    if (nav) nav.classList.toggle('active', i === n);
+    sec.classList.toggle('active-stage', i === n);
+    nav.classList.toggle('active', i === n);
   }
 
   // Sync TTS textarea from script
@@ -1571,25 +1232,17 @@ async function runScriptify() {
 function renderPrompts(prompts) {
   if (!prompts.length) return;
   document.getElementById('promptCount').textContent = prompts.length;
-  document.getElementById('promptsList').innerHTML = prompts.map((p, i) => {
-    const isObj = typeof p === 'object' && p.prompt;
-    const text = isObj ? p.prompt : p;
-    const ts = isObj && p.timestamp ? `<span style="color:var(--amber);">[${p.timestamp}]</span> ` : '';
-    const cue = isObj && p.cue ? `<span style="color:var(--text2);">${escHtml(p.cue)}</span> — ` : '';
-    return `
+  document.getElementById('promptsList').innerHTML = prompts.map((p, i) => `
     <div class="prompt-item">
       <div class="prompt-num">${String(i + 1).padStart(2, '0')}</div>
-      <div class="prompt-text">${ts}${cue}${escHtml(text)}</div>
+      <div class="prompt-text">${escHtml(p)}</div>
       <button class="copy-prompt-btn" onclick="copyPrompt(this, ${i})">Copiar</button>
-    </div>`;
-  }).join('');
+    </div>`).join('');
   document.getElementById('promptsPanel').classList.add('show');
 }
 
 function copyPrompt(btn, idx) {
-  const p = state.imagePrompts[idx];
-  const text = typeof p === 'object' && p.prompt ? p.prompt : p;
-  navigator.clipboard.writeText(text).then(() => {
+  navigator.clipboard.writeText(state.imagePrompts[idx]).then(() => {
     btn.textContent = '✓ Copiado';
     btn.classList.add('copied');
     setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 1800);
@@ -1598,8 +1251,7 @@ function copyPrompt(btn, idx) {
 
 function copyAllPrompts() {
   if (!state.imagePrompts.length) return;
-  const texts = state.imagePrompts.map(p => typeof p === 'object' && p.prompt ? p.prompt : p);
-  navigator.clipboard.writeText(texts.join('\n\n')).then(() => {
+  navigator.clipboard.writeText(state.imagePrompts.join('\n\n')).then(() => {
     const btn = document.querySelector('.prompts-header .btn');
     const orig = btn.textContent;
     btn.textContent = '✓ Copiados!';
@@ -1612,8 +1264,7 @@ function copyAllPrompts() {
 ══════════════════════════════════════════ */
 async function runTTS() {
   const apiKey = getApiKey();
-  let text   = document.getElementById('ttsText').value.trim();
-  const useEnhance = document.getElementById('enhanceToggle').checked;
+  const text   = document.getElementById('ttsText').value.trim();
 
   if (!apiKey) { showAlert('ttsAlert', '⚠ Insira a Gemini API Key na barra superior.', 'error'); return; }
   if (!text)   { showAlert('ttsAlert', '⚠ Cole o roteiro antes de gerar o áudio.', 'error'); return; }
@@ -1647,34 +1298,10 @@ async function runTTS() {
   }
 
   try {
-    if (useEnhance) {
-      setProgress(0, 0, 'Analisando entonação...');
-      addLog('Iniciando /enhance para marcações de entonação...', 'info');
-      
-      const enhRes = await fetch('/enhance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ api_key: apiKey, text })
-      });
-      if (!enhRes.ok) {
-        const err = await enhRes.json().catch(()=>({}));
-        throw new Error('Enhance: ' + (err.error || 'Erro desconhecido'));
-      }
-      const enhData = await enhRes.json();
-      text = enhData.enhanced_text;
-      
-      // Update the textarea to show the enhanced text
-      document.getElementById('ttsText').value = text;
-      updateTtsCount();
-      
-      addLog('✓ Entonação adicionada com sucesso.', 'ok');
-      setProgress(0, 0, 'Conectando ao Gemini TTS...');
-    }
-
     const res = await fetch('/generate-stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ api_key: apiKey, text, voice: state.selectedVoice, session_id: state.sessionId }),
+      body: JSON.stringify({ api_key: apiKey, text, voice: state.selectedVoice }),
     });
 
     if (!res.ok) {
@@ -1702,31 +1329,16 @@ async function runTTS() {
         let evt;
         try { evt = JSON.parse(line); } catch { continue; }
 
-        if (evt.type === 'session') {
-          state.sessionId = evt.session_id;
-          addLog(`Sessão: ${evt.session_id.slice(0,8)}...`, 'ok');
-
-        } else if (evt.type === 'skipped') {
-          setProgress(evt.chunk, evt.total || evt.chunk,
-            `Chunk ${evt.chunk} recuperado do disco (skip)`);
-          addLog(`[${String(evt.chunk).padStart(2,'0')}] ✓ recuperado do cache`, 'ok');
-
-        } else if (evt.type === 'progress') {
+        if (evt.type === 'progress') {
           setProgress(evt.current, evt.total,
             `Processando chunk ${evt.current} de ${evt.total}...`);
           addLog(`[${String(evt.current).padStart(2,'0')}/${evt.total}] ${evt.preview || ''}...`, 'ok');
-
-        } else if (evt.type === 'waiting') {
-          setProgress(evt.chunk, evt.total || evt.chunk,
-            `Aguardando cota da API (${evt.seconds}s)...`);
-          addLog(`[${String(evt.chunk).padStart(2,'0')}/${evt.total}] aguardando cota da API por ${evt.seconds}s`, 'warn');
 
         } else if (evt.type === 'error') {
           addLog(`[WARN] chunk ${evt.chunk}: ${evt.message}`, 'warn');
 
         } else if (evt.type === 'done') {
           audiob64 = evt.audio_b64;
-          state.sessionId = null; // Reset on success
           setProgress(evt.chunks_processed || 1, evt.chunks_processed || 1, 'Finalizado!');
           addLog(`✓ ${evt.chunks_processed || 1} chunks processados`, 'ok');
         }
@@ -1742,7 +1354,6 @@ async function runTTS() {
 
     document.getElementById('audioPlayer').src = audioUrl;
     document.getElementById('audioDownload').href = audioUrl;
-    document.getElementById('audioDownload').download = `narration_${state.selectedVoice.toLowerCase()}.wav`;
     document.getElementById('audioResult').classList.add('show');
     document.getElementById('audioResult').scrollIntoView({ behavior: 'smooth' });
 
@@ -1762,247 +1373,10 @@ async function runTTS() {
 }
 
 /* ══════════════════════════════════════════
-   STAGE 3 — MEDIA LIBRARY
+   STAGE 3 — ASSEMBLE
 ══════════════════════════════════════════ */
-
-function switchMediaTab(tab) {
-  const brollTab = document.getElementById('brollTab');
-  const imagesTab = document.getElementById('imagesTab');
-  const tabBroll = document.getElementById('tabBroll');
-  const tabImages = document.getElementById('tabImages');
-
-  if (tab === 'broll') {
-    brollTab.style.display = 'block';
-    imagesTab.style.display = 'none';
-    tabBroll.style.borderBottomColor = 'var(--amber)';
-    tabBroll.style.color = 'var(--amber)';
-    tabImages.style.borderBottomColor = 'transparent';
-    tabImages.style.color = '';
-  } else {
-    brollTab.style.display = 'none';
-    imagesTab.style.display = 'block';
-    tabImages.style.borderBottomColor = 'var(--amber)';
-    tabImages.style.color = 'var(--amber)';
-    tabBroll.style.borderBottomColor = 'transparent';
-    tabBroll.style.color = '';
-  }
-}
-
-async function searchBroll() {
-  const raw = document.getElementById('brollKeywords').value.trim();
-  if (!raw) { showAlert('brollAlert', '⚠ Digite palavras-chave.', 'error'); return; }
-
-  const keywords = raw.split(',').map(k => k.trim()).filter(Boolean);
-  const collection = document.getElementById('brollCollection').value;
-
-  setLoading('brollSearchBtn', 'brollSpin', true);
-  hideAlert('brollAlert');
-
-  try {
-    const res = await fetch('/broll/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ keywords, collection }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erro na pesquisa');
-
-    const clips = data.clips || [];
-    document.getElementById('brollCount').textContent = `${clips.length} clips`;
-    document.getElementById('brollGrid').innerHTML = clips.map((c, i) => `
-      <div style="background:var(--bg2); border:1px solid var(--border2); border-radius:3px; overflow:hidden; cursor:pointer; position:relative;"
-           onclick="selectBroll('${escHtml(c.download_url)}', '${escHtml(c.title)}', this)"
-           title="Clique para fazer download e adicionar ao vídeo">
-        <img src="${c.thumb}" alt="${escHtml(c.title)}" style="width:100%; height:100px; object-fit:cover; display:block;">
-        <div style="padding:8px;">
-          <div style="font-family:var(--mono); font-size:10px; color:var(--text); line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(c.title)}</div>
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
-            <div style="font-family:var(--mono); font-size:9px; color:var(--text3);">📋 PD</div>
-            <button class="btn btn-ghost" style="font-size:9px; padding:2px 5px; height:auto; color:var(--amber);" 
-                    onclick="event.stopPropagation(); openPreview('${c.preview_url}')">
-              👁 Visualizar
-            </button>
-          </div>
-        </div>
-      </div>`).join('');
-    document.getElementById('brollResults').style.display = clips.length ? 'block' : 'none';
-
-    if (!clips.length) showAlert('brollAlert', 'Nenhum resultado encontrado.', 'info');
-    else showAlert('brollAlert', `✓ ${clips.length} clips encontrados. Clique para selecionar.`, 'success');
-
-  } catch (e) {
-    showAlert('brollAlert', '✗ ' + e.message, 'error');
-  } finally {
-    setLoading('brollSearchBtn', 'brollSpin', false);
-  }
-}
-
-function openPreview(url) {
-  const modal = document.getElementById('previewModal');
-  const iframe = document.getElementById('previewIframe');
-  iframe.src = url;
-  modal.style.display = 'flex';
-}
-
-function closePreview() {
-  const modal = document.getElementById('previewModal');
-  const iframe = document.getElementById('previewIframe');
-  iframe.src = '';
-  modal.style.display = 'none';
-}
-
-async function selectBroll(url, title, el) {
-  if (el.classList.contains('selected')) return; // Already added
-  el.style.opacity = '0.5';
-  
-  showAlert('brollAlert', `Baixando vídeo: ${title.slice(0,30)}...`, 'loading');
-  try {
-    const res = await fetch('/broll/download', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erro no download');
-    
-    // Add to unified asset list
-    state.selectedAssets.push({
-      type: 'server',
-      path: data.local_path,
-      name: title
-    });
-    
-    el.classList.add('selected');
-    el.style.opacity = '1';
-    el.style.borderColor = 'var(--amber)';
-    
-    updateAssetList();
-    showAlert('brollAlert', `✓ Vídeo adicionado: ${title.slice(0,30)}`, 'success');
-  } catch (e) {
-    el.style.opacity = '1';
-    showAlert('brollAlert', '✗ ' + e.message, 'error');
-  }
-}
-
+let selectedAudioFile  = null;
 let selectedImageFiles = [];
-
-function naturalAssetSortKey(name, fallbackIndex = 0) {
-  const base = String(name || '')
-    .replace(/\.[^.]+$/, '')
-    .toLowerCase();
-  const partMatch = base.match(/(?:^|[\s_-])(?:parte|part)\s*0*(\d+)(?=\D|$)/i);
-  if (partMatch) return { group: 0, part: Number(partMatch[1]), base, fallbackIndex };
-
-  const natural = base.split(/(\d+)/).map(part =>
-    /^\d+$/.test(part) ? [0, Number(part)] : [1, part]
-  );
-  return { group: 1, natural, fallbackIndex };
-}
-
-function compareNaturalAssets(a, b) {
-  const ka = naturalAssetSortKey(a.name, a.fallbackIndex);
-  const kb = naturalAssetSortKey(b.name, b.fallbackIndex);
-  if (ka.group !== kb.group) return ka.group - kb.group;
-  if (ka.group === 0) {
-    if (ka.part !== kb.part) return ka.part - kb.part;
-    const byName = ka.base.localeCompare(kb.base, 'pt-BR', { numeric: true, sensitivity: 'base' });
-    return byName || ka.fallbackIndex - kb.fallbackIndex;
-  }
-  const max = Math.max(ka.natural.length, kb.natural.length);
-  for (let i = 0; i < max; i++) {
-    if (!ka.natural[i]) return -1;
-    if (!kb.natural[i]) return 1;
-    if (ka.natural[i][0] !== kb.natural[i][0]) return ka.natural[i][0] - kb.natural[i][0];
-    if (ka.natural[i][1] !== kb.natural[i][1]) {
-      return ka.natural[i][0] === 0
-        ? ka.natural[i][1] - kb.natural[i][1]
-        : String(ka.natural[i][1]).localeCompare(String(kb.natural[i][1]), 'pt-BR', { sensitivity: 'base' });
-    }
-  }
-  return ka.fallbackIndex - kb.fallbackIndex;
-}
-
-function isVideoAsset(fileOrName) {
-  const name = typeof fileOrName === 'string' ? fileOrName : (fileOrName?.name || '');
-  const type = typeof fileOrName === 'string' ? '' : (fileOrName?.type || '');
-  return type.startsWith('video/') || /\.(mp4|mov|webm)$/i.test(name);
-}
-
-function onImageFiles(input) {
-  const files = Array.from(input.files)
-    .map((file, fallbackIndex) => ({ file, name: file.name, fallbackIndex }))
-    .sort(compareNaturalAssets)
-    .map(item => item.file)
-    .slice(0, 50);
-  
-  // Clear previous uploads from unified list
-  state.selectedAssets = state.selectedAssets.filter(a => a.type !== 'upload');
-  
-  // Add new uploads
-  files.forEach(f => {
-    state.selectedAssets.push({
-      type: 'upload',
-      filename: f.name,
-      file: f,
-      name: f.name,
-      mediaKind: isVideoAsset(f) ? 'video' : 'image'
-    });
-  });
-  
-  document.getElementById('imgCount').textContent = `${files.length} / 50 mídias`;
-
-  const label = document.getElementById('imgDropLabel');
-  label.innerHTML = files.length
-    ? `<strong style="color:var(--green)">✓ ${files.length} mídias selecionadas</strong>`
-    : '<strong>Clique</strong> ou arraste imagens e vídeos (máx 50)';
-
-  const strip = document.getElementById('imagePreviews');
-  strip.innerHTML = '';
-  files.forEach((f, i) => {
-    const url  = URL.createObjectURL(f);
-    const wrap = document.createElement('div');
-    wrap.className = 'thumb-wrap';
-    if (isVideoAsset(f)) {
-      wrap.innerHTML = `<video src="${url}" muted playsinline preload="metadata"></video><div class="thumb-kind">VID</div><div class="thumb-num">${i+1}</div>`;
-    } else {
-      wrap.innerHTML = `<img src="${url}" alt="asset ${i+1}"><div class="thumb-kind">IMG</div><div class="thumb-num">${i+1}</div>`;
-    }
-    strip.appendChild(wrap);
-  });
-
-  updateAssetList();
-  document.getElementById('hint3').style.display = state.selectedAssets.length ? 'block' : 'none';
-  if (state.selectedAssets.length) {
-    setBadge(3, 'done', 'PRONTO');
-    document.getElementById('nav-3').classList.add('done');
-  }
-}
-
-function updateAssetList() {
-  const list = document.getElementById('assetList');
-  if (!state.selectedAssets.length) {
-    document.getElementById('assetCount').textContent = `0 assets`;
-    list.innerHTML = '';
-    return;
-  }
-  
-  document.getElementById('assetCount').textContent = `${state.selectedAssets.length} assets`;
-  list.innerHTML = state.selectedAssets.map((a, i) => {
-    const icon = a.type === 'upload'
-      ? (a.mediaKind === 'video' || isVideoAsset(a.filename || a.name) ? '🎞' : '🖼')
-      : '🎬';
-    return `<div style="padding:3px 0;">${String(i+1).padStart(2,'0')}. ${icon} ${escHtml(a.name)}</div>`;
-  }).join('');
-  
-  document.getElementById('hint3').style.display = 'block';
-  setBadge(3, 'done', 'PRONTO');
-  document.getElementById('nav-3').classList.add('done');
-}
-
-/* ══════════════════════════════════════════
-   STAGE 4 — ASSEMBLE (async polling)
-══════════════════════════════════════════ */
-let selectedAudioFile = null;
 
 function onAudioFile(input) {
   selectedAudioFile = input.files[0] || null;
@@ -2012,7 +1386,30 @@ function onAudioFile(input) {
     : '<strong>Clique</strong> ou arraste o .wav aqui';
 }
 
+function onImageFiles(input) {
+  const files = Array.from(input.files).slice(0, 20);
+  selectedImageFiles = files;
+  document.getElementById('imgCount').textContent = `${files.length} / 20 imagens`;
+
+  const label = document.getElementById('imgDropLabel');
+  label.innerHTML = files.length
+    ? `<strong style="color:var(--green)">✓ ${files.length} imagens selecionadas</strong>`
+    : '<strong>Clique</strong> ou arraste as imagens (máx 20)';
+
+  /* Thumbnails */
+  const strip = document.getElementById('imagePreviews');
+  strip.innerHTML = '';
+  files.forEach((f, i) => {
+    const url  = URL.createObjectURL(f);
+    const wrap = document.createElement('div');
+    wrap.className = 'thumb-wrap';
+    wrap.innerHTML = `<img src="${url}" alt="img ${i+1}"><div class="thumb-num">${i+1}</div>`;
+    strip.appendChild(wrap);
+  });
+}
+
 async function runAssemble() {
+  /* Use audio blob from stage 2 if available, otherwise fall back to file input */
   const audioSource = state.audioBlob
     ? new File([state.audioBlob], 'audio.wav', { type: 'audio/wav' })
     : selectedAudioFile;
@@ -2022,365 +1419,57 @@ async function runAssemble() {
     return;
   }
 
-  if (!state.selectedAssets.length) {
-    showAlert('assembleAlert', '⚠ Adicione imagens ou B-Rolls na etapa Media Library.', 'error');
+  if (!selectedImageFiles.length) {
+    showAlert('assembleAlert', '⚠ Selecione pelo menos 1 imagem.', 'error');
     return;
   }
 
   setLoading('assembleBtn', 'assembleSpin', true);
-  showAlert('assembleAlert', 'Enviando arquivos e iniciando montagem...', 'loading');
+  showAlert('assembleAlert', 'Montando vídeo com FFmpeg... (pode levar 1–3 min)', 'loading');
   document.getElementById('videoResult').classList.remove('show');
-  document.getElementById('assembleProgress').classList.add('show');
-  setAssembleProgress(0, 'Iniciando...');
 
   try {
     const form = new FormData();
     form.append('audio', audioSource, audioSource.name);
-    
-    // Append actual files
-    const uploadAssets = state.selectedAssets.filter(a => a.type === 'upload');
-    uploadAssets.forEach(a => form.append('images', a.file, a.file.name));
-    
-    // Create manifest of order
-    const manifest = state.selectedAssets.map(a => ({
-      type: a.type,
-      filename: a.filename,
-      path: a.path
-    }));
-    form.append('manifest', JSON.stringify(manifest));
+    selectedImageFiles.forEach(f => form.append('images', f, f.name));
 
     const res = await fetch('/assemble', { method: 'POST', body: form });
-    const data = await res.json();
 
-    if (!res.ok) throw new Error(data.error || 'Erro no servidor');
+    if (!res.ok) {
+      let msg = 'Erro no servidor.';
+      try { const j = await res.json(); msg = j.error || msg; } catch {}
+      throw new Error(msg);
+    }
 
-    const jobId = data.job_id;
-    showAlert('assembleAlert', `Job iniciado: ${jobId.slice(0,8)}... Aguardando...`, 'loading');
+    const blob   = await res.blob();
+    const vidUrl = URL.createObjectURL(blob);
 
-    // Polling
-    const poll = setInterval(async () => {
-      try {
-        const s = await fetch(`/assemble/status/${jobId}`).then(r => r.json());
-        setAssembleProgress(s.progress * 100, `Montando... ${Math.round(s.progress * 100)}%`);
+    document.getElementById('videoPlayer').src = vidUrl;
+    document.getElementById('videoDownload').href = vidUrl;
+    document.getElementById('videoResult').classList.add('show');
+    document.getElementById('videoResult').scrollIntoView({ behavior: 'smooth' });
 
-        if (s.status === 'done') {
-          clearInterval(poll);
-          setAssembleProgress(100, 'Finalizado!');
-
-          document.getElementById('videoDownload').href = s.download_url;
-          // Load video for preview
-          const vidRes = await fetch(s.download_url);
-          const blob = await vidRes.blob();
-          document.getElementById('videoPlayer').src = URL.createObjectURL(blob);
-
-          document.getElementById('videoResult').classList.add('show');
-          document.getElementById('videoResult').scrollIntoView({ behavior: 'smooth' });
-
-          setBadge(4, 'done', 'PRONTO');
-          document.getElementById('nav-4').classList.add('done');
-          document.getElementById('hint4').style.display = 'block';
-          showAlert('assembleAlert', '✓ Vídeo montado com sucesso!', 'success');
-          setLoading('assembleBtn', 'assembleSpin', false);
-
-        } else if (s.status === 'error') {
-          clearInterval(poll);
-          throw new Error(s.error || 'Erro durante montagem');
-        }
-      } catch (e) {
-        clearInterval(poll);
-        showAlert('assembleAlert', '✗ ' + e.message, 'error');
-        setLoading('assembleBtn', 'assembleSpin', false);
-      }
-    }, 5000);
+    setBadge(3, 'done', 'PRONTO');
+    document.getElementById('nav-3').classList.add('done');
+    showAlert('assembleAlert', '✓ Vídeo montado com sucesso!', 'success');
 
   } catch (e) {
     showAlert('assembleAlert', '✗ ' + e.message, 'error');
+  } finally {
     setLoading('assembleBtn', 'assembleSpin', false);
-  }
-}
-
-function setAssembleProgress(pct, label) {
-  document.getElementById('assembleProgressFill').style.width = pct + '%';
-  document.getElementById('assembleProgressPct').textContent = Math.round(pct) + '%';
-  document.getElementById('assembleProgressLabel').textContent = label;
-}
-
-/* ══════════════════════════════════════════
-   STAGE 5 — SHORTS
-══════════════════════════════════════════ */
-async function runShortsScriptify() {
-  const apiKey = getApiKey();
-  const script = document.getElementById('scriptText').value.trim()
-    || document.getElementById('ttsText').value.trim();
-  const count = Number(document.getElementById('shortsCount').value || 3);
-  const duration = Number(document.getElementById('shortsDuration').value || 60);
-
-  if (!apiKey) { showAlert('shortsAlert', '⚠ Insira a Gemini API Key na barra superior.', 'error'); return; }
-  if (script.length < 500) { showAlert('shortsAlert', '⚠ Gere ou cole um roteiro longo antes de criar Shorts.', 'error'); return; }
-
-  setLoading('shortsBtn', 'shortsSpin', true);
-  showAlert('shortsAlert', 'Gerando roteiros curtos a partir do documentário...', 'loading');
-  document.getElementById('shortsGrid').innerHTML = '';
-
-  try {
-    const res = await fetch('/shorts/scriptify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        api_key: apiKey,
-        script,
-        count,
-        duration_seconds: duration,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erro ao gerar Shorts');
-
-    state.shorts = (data.shorts || []).map((item, i) => ({
-      ...item,
-      audioBlob: null,
-      audioUrl: null,
-      videoUrl: null,
-      sessionId: null,
-      index: i,
-    }));
-
-    renderShorts();
-    setBadge(5, 'active', 'SHORTS');
-    showAlert('shortsAlert', `✓ ${state.shorts.length} Shorts gerados. Edite os textos antes de narrar, se quiser.`, 'success');
-
-  } catch (e) {
-    showAlert('shortsAlert', '✗ ' + e.message, 'error');
-  } finally {
-    setLoading('shortsBtn', 'shortsSpin', false);
-  }
-}
-
-function renderShorts() {
-  const grid = document.getElementById('shortsGrid');
-  grid.innerHTML = state.shorts.map((short, i) => {
-    const prompts = (short.image_prompts || []).map((p, idx) => {
-      const cue = p.cue ? `${escHtml(p.cue)} — ` : '';
-      return `<div class="prompt-item">
-        <div class="prompt-num">${String(idx + 1).padStart(2, '0')}</div>
-        <div class="prompt-text">${cue}${escHtml(p.prompt || p)}</div>
-      </div>`;
-    }).join('');
-    const keywords = (short.broll_keywords || []).map(k => `<span class="short-pill">${escHtml(k)}</span>`).join('');
-    return `
-      <article class="short-card" id="shortCard-${i}">
-        <div class="short-card-header">
-          <div class="short-kicker">Short ${String(i + 1).padStart(2, '0')}</div>
-          <div style="font-family:var(--mono); font-size:10px; color:var(--text3);">9:16 · MP4 vertical</div>
-        </div>
-        <div class="short-card-body">
-          <input class="short-title-input" id="shortTitle-${i}" type="text"
-                 value="${escHtml(short.title || '')}"
-                 oninput="updateShortField(${i}, 'title', this.value)">
-          <textarea class="short-script" id="shortScript-${i}" rows="7"
-                    oninput="updateShortField(${i}, 'script', this.value)">${escHtml(short.script || '')}</textarea>
-          <div class="short-meta">
-            ${(short.hook ? `<span class="short-pill">Hook: ${escHtml(short.hook.slice(0, 70))}</span>` : '')}
-            ${(short.cta ? `<span class="short-pill">CTA: ${escHtml(short.cta.slice(0, 70))}</span>` : '')}
-            ${keywords}
-          </div>
-          ${prompts ? `<div class="prompts-panel show" style="margin-top:12px;"><div class="prompts-header"><span class="prompts-title">Prompts verticais</span></div><div class="prompts-list">${prompts}</div></div>` : ''}
-          <div class="short-actions">
-            <button class="btn btn-secondary btn-sm" id="shortAudioBtn-${i}" onclick="generateShortAudio(${i})">
-              <div class="spin" id="shortAudioSpin-${i}"></div>
-              Gerar áudio
-            </button>
-            <button class="btn btn-green btn-sm" id="shortVideoBtn-${i}" onclick="assembleShort(${i})">
-              <div class="spin" id="shortVideoSpin-${i}"></div>
-              Montar Short
-            </button>
-          </div>
-          <div class="alert" id="shortAlert-${i}"></div>
-          <div class="short-result" id="shortAudioResult-${i}" style="display:none;">
-            <div class="result-label">Áudio do Short</div>
-            <audio id="shortAudioPlayer-${i}" controls></audio>
-            <a class="download-link" id="shortAudioDownload-${i}" download="short_audio.wav">⬇ &nbsp;Baixar WAV</a>
-          </div>
-          <div class="short-result" id="shortVideoResult-${i}" style="display:none;">
-            <div class="result-label">Short Montado</div>
-            <video id="shortVideoPlayer-${i}" controls></video>
-            <a class="download-link" id="shortVideoDownload-${i}" download="short_final.mp4">⬇ &nbsp;Baixar MP4</a>
-          </div>
-        </div>
-      </article>`;
-  }).join('');
-}
-
-function updateShortField(index, field, value) {
-  if (!state.shorts[index]) return;
-  state.shorts[index][field] = value;
-}
-
-function syncShortFromDom(index) {
-  const short = state.shorts[index];
-  if (!short) return null;
-  short.title = document.getElementById(`shortTitle-${index}`).value.trim();
-  short.script = document.getElementById(`shortScript-${index}`).value.trim();
-  return short;
-}
-
-async function generateShortAudio(index) {
-  const apiKey = getApiKey();
-  const short = syncShortFromDom(index);
-  if (!apiKey) { showAlert(`shortAlert-${index}`, '⚠ Insira a Gemini API Key na barra superior.', 'error'); return; }
-  if (!short || !short.script) { showAlert(`shortAlert-${index}`, '⚠ O roteiro do Short está vazio.', 'error'); return; }
-
-  setLoading(`shortAudioBtn-${index}`, `shortAudioSpin-${index}`, true);
-  showAlert(`shortAlert-${index}`, 'Gerando áudio do Short...', 'loading');
-
-  try {
-    const sessionId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + `-short-${index}`;
-    const res = await fetch('/generate-stream', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        api_key: apiKey,
-        text: short.script,
-        voice: state.selectedVoice,
-        session_id: sessionId,
-      }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: 'Erro desconhecido' }));
-      throw new Error(err.error || 'Erro na API');
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let audioB64 = null;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop();
-      for (const raw of lines) {
-        const line = raw.startsWith('data: ') ? raw.slice(6) : raw;
-        if (!line.trim()) continue;
-        let evt;
-        try { evt = JSON.parse(line); } catch { continue; }
-        if (evt.type === 'progress') {
-          showAlert(`shortAlert-${index}`, `Narrando chunk ${evt.current}/${evt.total}...`, 'loading');
-        } else if (evt.type === 'waiting') {
-          showAlert(`shortAlert-${index}`, `Aguardando cota da API (${evt.seconds}s)...`, 'loading');
-        } else if (evt.type === 'error') {
-          showAlert(`shortAlert-${index}`, `Aviso no chunk ${evt.chunk}: ${evt.message}`, 'loading');
-        } else if (evt.type === 'done') {
-          audioB64 = evt.audio_b64;
-        }
-      }
-    }
-
-    if (!audioB64) throw new Error('Nenhum áudio recebido do servidor.');
-    const bytes = Uint8Array.from(atob(audioB64), c => c.charCodeAt(0));
-    short.audioBlob = new Blob([bytes], { type: 'audio/wav' });
-    short.audioUrl = URL.createObjectURL(short.audioBlob);
-
-    document.getElementById(`shortAudioPlayer-${index}`).src = short.audioUrl;
-    document.getElementById(`shortAudioDownload-${index}`).href = short.audioUrl;
-    document.getElementById(`shortAudioDownload-${index}`).download = `short_${index + 1}_audio.wav`;
-    document.getElementById(`shortAudioResult-${index}`).style.display = 'block';
-    showAlert(`shortAlert-${index}`, '✓ Áudio do Short gerado.', 'success');
-
-  } catch (e) {
-    showAlert(`shortAlert-${index}`, '✗ ' + e.message, 'error');
-  } finally {
-    setLoading(`shortAudioBtn-${index}`, `shortAudioSpin-${index}`, false);
-  }
-}
-
-async function assembleShort(index) {
-  const short = syncShortFromDom(index);
-  if (!short || !short.audioBlob) {
-    showAlert(`shortAlert-${index}`, '⚠ Gere o áudio deste Short antes de montar o vídeo.', 'error');
-    return;
-  }
-  if (!state.selectedAssets.length) {
-    showAlert(`shortAlert-${index}`, '⚠ Adicione imagens ou B-Rolls na etapa Media Library.', 'error');
-    return;
-  }
-
-  setLoading(`shortVideoBtn-${index}`, `shortVideoSpin-${index}`, true);
-  showAlert(`shortAlert-${index}`, 'Montando MP4 vertical 1080x1920...', 'loading');
-  document.getElementById(`shortVideoResult-${index}`).style.display = 'none';
-
-  try {
-    const form = new FormData();
-    const audioFile = new File([short.audioBlob], `short_${index + 1}.wav`, { type: 'audio/wav' });
-    form.append('audio', audioFile, audioFile.name);
-    form.append('format', 'short');
-
-    const uploadAssets = state.selectedAssets.filter(a => a.type === 'upload');
-    uploadAssets.forEach(a => form.append('images', a.file, a.file.name));
-    const manifest = state.selectedAssets.map(a => ({
-      type: a.type,
-      filename: a.filename,
-      path: a.path,
-    }));
-    form.append('manifest', JSON.stringify(manifest));
-
-    const res = await fetch('/assemble', { method: 'POST', body: form });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erro no servidor');
-
-    const jobId = data.job_id;
-    const poll = setInterval(async () => {
-      try {
-        const status = await fetch(`/assemble/status/${jobId}`).then(r => r.json());
-        showAlert(`shortAlert-${index}`, `Montando... ${Math.round((status.progress || 0) * 100)}%`, 'loading');
-
-        if (status.status === 'done') {
-          clearInterval(poll);
-          document.getElementById(`shortVideoDownload-${index}`).href = status.download_url;
-          document.getElementById(`shortVideoDownload-${index}`).download = `short_${index + 1}_final.mp4`;
-
-          const vidRes = await fetch(status.download_url);
-          const blob = await vidRes.blob();
-          short.videoUrl = URL.createObjectURL(blob);
-          document.getElementById(`shortVideoPlayer-${index}`).src = short.videoUrl;
-          document.getElementById(`shortVideoResult-${index}`).style.display = 'block';
-
-          setBadge(5, 'done', 'PRONTO');
-          document.getElementById('nav-5').classList.add('done');
-          showAlert(`shortAlert-${index}`, '✓ Short montado com sucesso.', 'success');
-          setLoading(`shortVideoBtn-${index}`, `shortVideoSpin-${index}`, false);
-
-        } else if (status.status === 'error') {
-          clearInterval(poll);
-          throw new Error(status.error || 'Erro durante montagem');
-        }
-      } catch (e) {
-        clearInterval(poll);
-        showAlert(`shortAlert-${index}`, '✗ ' + e.message, 'error');
-        setLoading(`shortVideoBtn-${index}`, `shortVideoSpin-${index}`, false);
-      }
-    }, 3000);
-
-  } catch (e) {
-    showAlert(`shortAlert-${index}`, '✗ ' + e.message, 'error');
-    setLoading(`shortVideoBtn-${index}`, `shortVideoSpin-${index}`, false);
   }
 }
 
 /* ── Badge helper ── */
 function setBadge(stage, type, text) {
   const el = document.getElementById('badge-' + stage);
-  if (el) {
-    el.textContent = text;
-    el.className = 'stage-badge badge-' + type;
-  }
+  el.textContent = text;
+  el.className = 'stage-badge badge-' + type;
 }
 
 /* ── Escape HTML ── */
 function escHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 /* ── Init ── */
@@ -2390,7 +1479,6 @@ updateTtsCount();
 /* Drag-over effect */
 ['audioDrop','imgDrop'].forEach(id => {
   const el = document.getElementById(id);
-  if (!el) return;
   el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
   el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
   el.addEventListener('drop', () => el.classList.remove('drag-over'));
