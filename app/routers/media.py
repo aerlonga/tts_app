@@ -1,8 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, Response, StreamingResponse
 
+from app.core.auth import resolve_gemini_api_key
 from app.schemas.media import (
     AssembleJobResponse,
     AssembleStatusResponse,
@@ -28,9 +29,12 @@ router = APIRouter(prefix="/media", tags=["media"])
 
 
 @router.post("/enhance", response_model=EnhanceResponse)
-def enhance(request: EnhanceRequest) -> EnhanceResponse:
+def enhance(request: Request, payload: EnhanceRequest) -> EnhanceResponse:
     try:
-        result = script_service.enhance_script(text=request.text, api_key=request.api_key)
+        result = script_service.enhance_script(
+            text=payload.text,
+            api_key=resolve_gemini_api_key(request, payload.api_key),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
@@ -39,9 +43,13 @@ def enhance(request: EnhanceRequest) -> EnhanceResponse:
 
 
 @router.post("/generate-tts")
-def generate_tts(request: GenerateTTSRequest) -> Response:
+def generate_tts(request: Request, payload: GenerateTTSRequest) -> Response:
     try:
-        result = audio_service.generate_tts_wav_bytes(text=request.text, voice=request.voice, api_key=request.api_key)
+        result = audio_service.generate_tts_wav_bytes(
+            text=payload.text,
+            voice=payload.voice,
+            api_key=resolve_gemini_api_key(request, payload.api_key),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
@@ -52,13 +60,13 @@ def generate_tts(request: GenerateTTSRequest) -> Response:
 
 
 @router.post("/generate-tts-stream")
-def generate_tts_stream(request: GenerateTTSStreamRequest) -> StreamingResponse:
+def generate_tts_stream(request: Request, payload: GenerateTTSStreamRequest) -> StreamingResponse:
     try:
         generator = audio_service.stream_tts_events(
-            text=request.text,
-            voice=request.voice,
-            api_key=request.api_key,
-            session_id=request.session_id,
+            text=payload.text,
+            voice=payload.voice,
+            api_key=resolve_gemini_api_key(request, payload.api_key),
+            session_id=payload.session_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -74,9 +82,12 @@ def generate_tts_stream(request: GenerateTTSStreamRequest) -> StreamingResponse:
 
 
 @router.post("/generate-script", response_model=GenerateScriptResponse)
-def generate_script(request: GenerateScriptRequest) -> GenerateScriptResponse:
+def generate_script(request: Request, payload: GenerateScriptRequest) -> GenerateScriptResponse:
     try:
-        result = script_service.generate_script_from_url(url=str(request.url), api_key=request.api_key)
+        result = script_service.generate_script_from_url(
+            url=str(payload.url),
+            api_key=resolve_gemini_api_key(request, payload.api_key),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
@@ -90,13 +101,13 @@ def generate_script(request: GenerateScriptRequest) -> GenerateScriptResponse:
 
 
 @router.post("/generate-short", response_model=GenerateShortResponse)
-def generate_short(request: GenerateShortRequest) -> GenerateShortResponse:
+def generate_short(request: Request, payload: GenerateShortRequest) -> GenerateShortResponse:
     try:
         result = short_service.generate_shorts(
-            script=request.script,
-            count=request.count,
-            duration_seconds=request.duration_seconds,
-            api_key=request.api_key,
+            script=payload.script,
+            count=payload.count,
+            duration_seconds=payload.duration_seconds,
+            api_key=resolve_gemini_api_key(request, payload.api_key),
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -156,6 +167,7 @@ def assemble_download(job_id: str) -> FileResponse:
 
 @router.post("/generate-video", response_model=AssembleJobResponse, status_code=202)
 def generate_video(
+    request: Request,
     api_key: Annotated[str | None, Form()] = None,
     script: Annotated[str, Form()] = "",
     voice: Annotated[str, Form()] = "Charon",
@@ -170,7 +182,7 @@ def generate_video(
         job_id = media_service.generate_video_job(
             script=script,
             voice=voice,
-            api_key=api_key,
+            api_key=resolve_gemini_api_key(request, api_key),
             asset_uploads=images or [],
             manifest_str=manifest,
             video_format=format,

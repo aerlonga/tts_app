@@ -1,0 +1,43 @@
+import { Link } from 'react-router-dom';
+import { CheckCircle2, KeyRound, Mic2, Settings2 } from 'lucide-react';
+import { useAppStore } from '@/stores/appStore';
+
+interface HeaderProps {
+  authenticated: boolean;
+}
+
+export function Header({ authenticated }: HeaderProps) {
+  const selectedVoice = useAppStore((state) => state.selectedVoice);
+  const hasAudio = useAppStore((state) => Boolean(state.generatedAudio));
+
+  return (
+    <header className="mb-8 flex flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[linear-gradient(135deg,rgba(20,23,32,0.96),rgba(8,10,12,0.96))] px-5 py-5 md:flex-row md:items-center md:justify-between">
+      <div>
+        <p className="text-xs uppercase tracking-[0.35em] text-[var(--amber)]">React + Vite / FastAPI</p>
+        <h2 className="mt-2 font-display text-4xl uppercase tracking-[0.08em] text-[var(--text)]">Frontend Cinemático</h2>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border2)] bg-[var(--bg2)] px-4 py-2 text-[var(--text2)]">
+          <KeyRound className="h-4 w-4 text-[var(--amber)]" />
+          Sessão {authenticated ? 'ativa' : 'inativa'}
+        </div>
+        <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border2)] bg-[var(--bg2)] px-4 py-2 text-[var(--text2)]">
+          <Mic2 className="h-4 w-4 text-[var(--blue)]" />
+          Voz {selectedVoice}
+        </div>
+        <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border2)] bg-[var(--bg2)] px-4 py-2 text-[var(--text2)]">
+          <CheckCircle2 className={`h-4 w-4 ${hasAudio ? 'text-[var(--green)]' : 'text-[var(--text3)]'}`} />
+          Áudio {hasAudio ? 'pronto' : 'pendente'}
+        </div>
+        <Link
+          to="/settings"
+          className="inline-flex items-center gap-2 rounded-full border border-[var(--amber)] bg-[var(--amber)]/10 px-4 py-2 text-[var(--amber)] transition hover:bg-[var(--amber)]/20"
+        >
+          <Settings2 className="h-4 w-4" />
+          Settings
+        </Link>
+      </div>
+    </header>
+  );
+}

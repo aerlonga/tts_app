@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
+from app.core.auth import resolve_gemini_api_key
 from app.schemas.ai import (
     AIUsageSummary,
     AssistantContextItem,
@@ -16,15 +17,15 @@ router = APIRouter(prefix="/ai", tags=["ai"])
 
 
 @router.post("/generate", response_model=GenerateAIResponse)
-def generate_ai(request: GenerateAIRequest) -> GenerateAIResponse:
+def generate_ai(request: Request, payload: GenerateAIRequest) -> GenerateAIResponse:
     try:
         result = gemini_service.generate_text(
-            feature=request.feature,
-            contents=request.prompt,
-            api_key=request.api_key,
-            model=request.model,
-            system_instruction=request.system_instruction,
-            temperature=request.temperature,
+            feature=payload.feature,
+            contents=payload.prompt,
+            api_key=resolve_gemini_api_key(request, payload.api_key),
+            model=payload.model,
+            system_instruction=payload.system_instruction,
+            temperature=payload.temperature,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -47,14 +48,14 @@ def generate_ai(request: GenerateAIRequest) -> GenerateAIResponse:
 
 
 @router.post("/assistant", response_model=AssistantResponse)
-def assistant(request: AssistantRequest) -> AssistantResponse:
+def assistant(request: Request, payload: AssistantRequest) -> AssistantResponse:
     try:
         result = ai_assistant_service.ask(
-            prompt=request.prompt,
-            task_type=request.task_type,
-            preferred_provider=request.preferred_provider,
-            api_key=request.api_key,
-            max_context_docs=request.max_context_docs,
+            prompt=payload.prompt,
+            task_type=payload.task_type,
+            preferred_provider=payload.preferred_provider,
+            api_key=resolve_gemini_api_key(request, payload.api_key),
+            max_context_docs=payload.max_context_docs,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

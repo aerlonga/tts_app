@@ -13,6 +13,7 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
+node_modules/
 build/
 develop-eggs/
 dist/
@@ -53,3 +54,7 @@ logs/
 *.log
 storage/*.db
 storage/*.sqlite*
+
+# TypeScript / Vite
+*.tsbuildinfo
+vite.config.d.ts

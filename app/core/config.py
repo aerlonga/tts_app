@@ -1,3 +1,4 @@
+import secrets
 from functools import lru_cache
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -29,7 +30,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("APP_DEBUG"),
     )
     database_url: str = Field(
-        default="postgresql://ttsapp:ttsapp_local@localhost:5432/video_ai_automation",
+        default="sqlite:///storage/app.db",
         validation_alias=AliasChoices("DATABASE_URL"),
     )
     storage_root: str = Field(
@@ -41,6 +42,10 @@ class Settings(BaseSettings):
     broll_dir: str = Field(default="/tmp/broll")
 
     gemini_api_key: str = Field(default="")
+    session_secret_key: str = Field(
+        default_factory=lambda: secrets.token_urlsafe(32),
+        validation_alias=AliasChoices("SESSION_SECRET_KEY"),
+    )
     gemini_model: str = Field(default="gemini-1.5-flash", validation_alias=AliasChoices("GEMINI_MODEL"))
     gemini_embedding_model: str = Field(
         default="text-embedding-004",

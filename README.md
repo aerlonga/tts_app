@@ -26,6 +26,7 @@ pip install -r requirements.txt
 ### 3. Configuração de Variáveis (Opcional)
 Renomeie o `.env.example` para `.env` e configure sua API Key.
 Uma **Gemini API Key** pode ser obtida em → https://aistudio.google.com/app/apikey
+Por padrão, o backend FastAPI usa `sqlite:///storage/app.db` para subir localmente sem depender de PostgreSQL.
 
 ---
 
