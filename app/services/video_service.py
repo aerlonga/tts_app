@@ -6,13 +6,18 @@ import shutil
 import threading
 import time
 import uuid
-from pathlib import Path
 
 from fastapi import UploadFile
 
-from app import FFMPEG_AVAILABLE, JOBS, MAX_AGE_SECS, assemble_video, natural_asset_sort_key
+from app import JOBS, MAX_AGE_SECS, natural_asset_sort_key
 from app.core.config import get_settings
 from app.services.audio_service import AudioService, audio_service
+from app.services.video_assembler import (
+    assemble_video,
+    is_ffmpeg_available,
+    uses_template_manifest,
+    validate_template_manifest,
+)
 from app.storage.local_storage import ensure_storage_layout
 
 
@@ -58,8 +63,8 @@ class VideoService:
         except Exception:
             return []
 
-    def _save_assets(self, *, job_dir: str, uploads: list[UploadFile], manifest: list[dict]) -> list[str]:
-        asset_paths: list[str] = []
+    def _save_assets(self, *, job_dir: str, uploads: list[UploadFile], manifest: list[dict]) -> list[dict]:
+        assets: list[dict] = []
         if manifest and all(item.get("type") == "upload" for item in manifest):
             manifest = [
                 item
@@ -76,16 +81,19 @@ class VideoService:
                     filename = item.get("filename")
                     if filename in uploaded_files:
                         ext = os.path.splitext(filename)[1].lower() or ".jpg"
-                        path = os.path.join(job_dir, f"asset_{len(asset_paths):04d}{ext}")
+                        path = os.path.join(job_dir, f"asset_{len(assets):04d}{ext}")
                         self._save_upload_file(uploaded_files[filename], path)
-                        asset_paths.append(path)
+                        assets.append({**item, "path": path})
                 elif item.get("type") == "server":
                     server_path = item.get("path")
                     if server_path and server_path.startswith(self.settings.broll_dir) and os.path.exists(server_path):
                         ext = os.path.splitext(server_path)[1].lower() or ".mp4"
-                        path = os.path.join(job_dir, f"asset_{len(asset_paths):04d}{ext}")
+                        path = os.path.join(job_dir, f"asset_{len(assets):04d}{ext}")
                         shutil.copy2(server_path, path)
-                        asset_paths.append(path)
+                        asset = dict(item)
+                        asset["source_path"] = server_path
+                        asset["path"] = path
+                        assets.append(asset)
         else:
             ordered_files = [
                 file
@@ -97,11 +105,11 @@ class VideoService:
             for index, upload in enumerate(ordered_files):
                 filename = upload.filename or f"asset_{index}"
                 ext = os.path.splitext(filename)[1].lower() or ".jpg"
-                path = os.path.join(job_dir, f"asset_{len(asset_paths):04d}{ext}")
+                path = os.path.join(job_dir, f"asset_{len(assets):04d}{ext}")
                 self._save_upload_file(upload, path)
-                asset_paths.append(path)
+                assets.append({"path": path, "filename": filename, "type": "upload"})
 
-        return asset_paths
+        return assets
 
     def _register_job(self, *, output_path: str, video_format: str) -> str:
         job_id = uuid.uuid4().hex
@@ -124,7 +132,7 @@ class VideoService:
         video_format: str = "long",
     ) -> str:
         ensure_storage_layout()
-        if not FFMPEG_AVAILABLE:
+        if not is_ffmpeg_available():
             raise RuntimeError("FFmpeg nao esta instalado no servidor. Instale FFmpeg para usar esta funcionalidade.")
 
         job_id = uuid.uuid4().hex
@@ -133,13 +141,16 @@ class VideoService:
 
         audio_path = os.path.join(job_dir, f"audio_{job_id}.wav")
         self._save_upload_file(audio_upload, audio_path)
-        asset_paths = self._save_assets(
+        manifest = self._normalize_manifest(manifest_str)
+        assets = self._save_assets(
             job_dir=job_dir,
             uploads=asset_uploads,
-            manifest=self._normalize_manifest(manifest_str),
+            manifest=manifest,
         )
-        if not asset_paths:
+        if not assets:
             raise ValueError("Nenhum asset valido foi encontrado para montar o video.")
+        if uses_template_manifest(assets):
+            validate_template_manifest(assets)
 
         output_path = os.path.join(job_dir, f"video_{job_id}.mp4")
         JOBS[job_id] = {
@@ -153,7 +164,14 @@ class VideoService:
 
         def run_job() -> None:
             try:
-                success = assemble_video(audio_path, asset_paths, output_path, job_id=job_id, format=video_format)
+                success = assemble_video(
+                    audio_path,
+                    assets,
+                    output_path,
+                    job_id=job_id,
+                    video_format=video_format,
+                    jobs=JOBS,
+                )
                 if success and os.path.exists(output_path):
                     JOBS[job_id]["status"] = "done"
                     JOBS[job_id]["progress"] = 1.0
@@ -178,19 +196,22 @@ class VideoService:
         video_format: str = "long",
     ) -> str:
         ensure_storage_layout()
-        if not FFMPEG_AVAILABLE:
+        if not is_ffmpeg_available():
             raise RuntimeError("FFmpeg nao esta instalado no servidor. Instale FFmpeg para usar esta funcionalidade.")
 
         job_id = uuid.uuid4().hex
         job_dir = os.path.join(self.settings.tmp_jobs_dir, job_id)
         os.makedirs(job_dir, exist_ok=True)
-        asset_paths = self._save_assets(
+        manifest = self._normalize_manifest(manifest_str)
+        assets = self._save_assets(
             job_dir=job_dir,
             uploads=asset_uploads,
-            manifest=self._normalize_manifest(manifest_str),
+            manifest=manifest,
         )
-        if not asset_paths:
+        if not assets:
             raise ValueError("Pelo menos 1 asset e obrigatorio.")
+        if uses_template_manifest(assets):
+            validate_template_manifest(assets)
 
         audio_path = os.path.join(job_dir, f"audio_{job_id}.wav")
         output_path = os.path.join(job_dir, f"video_{job_id}.mp4")
@@ -206,7 +227,14 @@ class VideoService:
         def run_job() -> None:
             try:
                 self.audio.generate_tts_to_path(text=script, voice=voice, output_path=audio_path, api_key=api_key)
-                success = assemble_video(audio_path, asset_paths, output_path, job_id=job_id, format=video_format)
+                success = assemble_video(
+                    audio_path,
+                    assets,
+                    output_path,
+                    job_id=job_id,
+                    video_format=video_format,
+                    jobs=JOBS,
+                )
                 if success and os.path.exists(output_path):
                     JOBS[job_id]["status"] = "done"
                     JOBS[job_id]["progress"] = 1.0

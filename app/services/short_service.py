@@ -1,12 +1,20 @@
 from __future__ import annotations
 
-from app import SHORTS_SYSTEM_PROMPT, extract_json_block, normalize_short_item
-from app.services.gemini_service import GeminiService, gemini_service
+from typing import TYPE_CHECKING
+from shorts_contract import SHORTS_SYSTEM_PROMPT, extract_json_block, normalize_short_item
+
+if TYPE_CHECKING:
+    from app.services.gemini_service import GeminiService
 
 
 class ShortService:
     def __init__(self, gemini: GeminiService | None = None) -> None:
-        self.gemini = gemini or gemini_service
+        if gemini is None:
+            from app.services.gemini_service import gemini_service
+
+            self.gemini = gemini_service
+        else:
+            self.gemini = gemini
 
     def generate_shorts(
         self,
@@ -60,4 +68,17 @@ class ShortService:
         }
 
 
-short_service = ShortService()
+class _LazyShortServiceProxy:
+    def __init__(self) -> None:
+        self._service: ShortService | None = None
+
+    def _resolve(self) -> ShortService:
+        if self._service is None:
+            self._service = ShortService()
+        return self._service
+
+    def __getattr__(self, name: str):
+        return getattr(self._resolve(), name)
+
+
+short_service = _LazyShortServiceProxy()

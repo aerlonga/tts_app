@@ -42,6 +42,28 @@ class ShortPromptItem(BaseModel):
     prompt: str
 
 
+class WhiskPromptItem(BaseModel):
+    cue: str = ""
+    prompt: str
+
+
+class TimelineSegment(BaseModel):
+    slot_index: int
+    asset_kind: str
+    duration_seconds: int
+    motion_preset: str
+    overlay_text: str | None = None
+
+
+class ProductionPack(BaseModel):
+    template_id: str
+    flow_video_prompt: str
+    whisk_image_prompts: list[WhiskPromptItem]
+    timeline_segments: list[TimelineSegment]
+    caption_text: str
+    cta_text: str
+
+
 class ShortItem(BaseModel):
     id: str
     title: str
@@ -50,6 +72,7 @@ class ShortItem(BaseModel):
     cta: str
     image_prompts: list[ShortPromptItem]
     broll_keywords: list[str]
+    production_pack: ProductionPack | None = None
 
 
 class GenerateShortRequest(BaseModel):
