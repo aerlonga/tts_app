@@ -4,8 +4,8 @@ import os
 
 import requests
 
-from app import search_broll
 from app.core.config import get_settings
+from app.core.runtime import search_broll
 from app.storage.local_storage import ensure_storage_layout
 
 

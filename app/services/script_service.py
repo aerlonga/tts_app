@@ -5,7 +5,7 @@ import re
 
 from newspaper import Article
 
-from app import ENHANCE_SYSTEM_PROMPT, SCRIPTIFY_SYSTEM_PROMPT
+from app.core.runtime import ENHANCE_SYSTEM_PROMPT, SCRIPTIFY_SYSTEM_PROMPT
 from app.services.gemini_service import GeminiService, gemini_service
 
 

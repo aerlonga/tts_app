@@ -9,8 +9,8 @@ import uuid
 
 from fastapi import UploadFile
 
-from app import JOBS, MAX_AGE_SECS, natural_asset_sort_key
 from app.core.config import get_settings
+from app.core.runtime import JOBS, MAX_AGE_SECS, natural_asset_sort_key
 from app.services.audio_service import AudioService, audio_service
 from app.services.video_assembler import (
     assemble_video,

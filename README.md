@@ -1,100 +1,171 @@
-# 🎙️ TTS Studio
+# TTS Studio
 
-Gerador de áudio local usando **Gemini 2.5 Flash TTS** da Google. Evoluído para uma pipeline semi-automatizada de produção de conteúdo (roteirização, narração e montagem de vídeos).
+Aplicacao para producao de conteudo com IA: roteirizacao, TTS, geracao de Shorts, busca de b-roll, montagem de video e integracoes com YouTube. O projeto agora roda em containers Docker, com backend FastAPI e frontend React/Vite servido por Nginx.
 
----
+## Requisitos
 
-## 📦 Requisitos e Instalação (Primeira Vez)
+Para subir a aplicacao com Docker, voce precisa apenas de:
 
-Para usar todas as funcionalidades (incluindo montagem de vídeo), você precisa do Python 3.9+ e do FFmpeg instalados no sistema.
+- Docker
+- Docker Compose v2
+- Um arquivo `.env` na raiz do projeto
 
-### 1. Instalar dependências do sistema
-No Ubuntu/Debian, instale o FFmpeg (necessário para a montagem de vídeos):
+O FFmpeg e as dependencias Python/Node sao instalados dentro das imagens Docker.
+
+## Configuracao
+
+Copie o arquivo de exemplo e preencha as chaves necessarias:
+
 ```bash
-sudo apt update
-sudo apt install ffmpeg
+cp .env.example .env
 ```
 
-### 2. Instalar dependências do Python
-Recomendado usar um ambiente virtual (venv). Instale os pacotes listados no `requirements.txt`:
+Principais variaveis:
+
+```env
+GEMINI_API_KEY=
+DATABASE_URL=sqlite:///storage/app.db
+STORAGE_PATH=storage
+YOUTUBE_API_KEY=
+YOUTUBE_CLIENT_ID=
+YOUTUBE_CLIENT_SECRET=
+YOUTUBE_REFRESH_TOKEN=
+```
+
+Uma Gemini API Key pode ser criada em:
+
+```text
+https://aistudio.google.com/app/apikey
+```
+
+Por padrao, o Docker Compose sobrescreve os caminhos internos para usar SQLite em `/app/storage/app.db` e monta `./storage` como volume persistente.
+
+## Subir Com Docker
+
+Na raiz do projeto:
+
 ```bash
-pip install -r requirements.txt
+docker compose up --build
 ```
 
-*(Caso não use o requirements.txt, você pode rodar: `pip install flask google-genai newspaper3k lxml lxml_html_clean nltk`)*
+Depois que os containers iniciarem:
 
-### 3. Configuração de Variáveis (Opcional)
-Renomeie o `.env.example` para `.env` e configure sua API Key.
-Uma **Gemini API Key** pode ser obtida em → https://aistudio.google.com/app/apikey
-Por padrão, o backend FastAPI usa `sqlite:///storage/app.db` para subir localmente sem depender de PostgreSQL.
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:8000`
+- Health check: `http://localhost:8000/health`
 
----
+O frontend tambem encaminha chamadas para o backend usando `/api`, entao este endpoint deve funcionar:
 
-## 🚀 Como usar
-
-### Iniciar o servidor
 ```bash
-source .venv/bin/activate
-
-python3 app.py
+curl http://localhost:5173/api/health
 ```
-Abra no navegador: `http://localhost:5000`
 
----
+## Rodar Em Segundo Plano
 
-## ✨ Funcionalidades (Novidades)
-
-### Fase 1 — Chunking + Progresso em Tempo Real
-- **Textos longos sem timeout**: O sistema divide automaticamente textos longos (por parágrafos ou frases) e processa os pedaços individualmente em formato de stream (`/generate-stream`).
-- **Barra de progresso**: Acompanhe o progresso da geração de áudio em tempo real na interface (aparece automaticamente para textos ≥ 500 caracteres).
-- **Fallback**: Textos curtos (< 500 caracteres) ainda usam a rota original `/generate`.
-
-### Fase 2 — Roteirização por URL
-- **Roteiro automático**: Insira a URL de um artigo (Wikipedia, blog, notícia).
-- **Extração inteligente**: O sistema extrai o conteúdo (usando `newspaper3k`) e envia para o Gemini criar um roteiro em inglês no estilo de canal "Dark".
-- **Prompts de Imagem**: Gera automaticamente 15 prompts fotográficos em JSON na mesma requisição, que são exibidos com um botão de "Copiar Todos" na interface.
-
-### Fase 3 — Montagem de Vídeo (FFmpeg)
-- **Criação de MP4 via FFmpeg**: Após gerar o áudio, o card "Montar Vídeo" ficará disponível.
-- **Slideshow animado**: Faça o upload das imagens geradas (de 1 a 20). O sistema calcula a duração do áudio (`ffprobe`), distribui as imagens igualmente e aplica efeito de fade cruzado (`xfade`).
-- **Tratamento gracioso de erros**: Retorna erro claro (503) caso o FFmpeg não esteja no servidor. O MP4 resultante é servido imediatamente para download pelo navegador.
-
----
-
-## 🎤 Geração Manual de Áudio
-
-1. Cole sua **Gemini API Key** no campo indicado (ou no `.env`).
-2. Escolha a **voz** desejada.
-3. Cole ou edite o **texto/roteiro**.
-4. (Opcional) Ative a **Entonação inteligente** para o Gemini adicionar marcações de voz.
-5. Clique em **Gerar Áudio**.
-6. Ouça direto no player ou **baixe o arquivo WAV**.
-
----
-
-## 🎭 Vozes disponíveis
-
-| Voz | Perfil |
-|-----|--------|
-| **Charon** | Profissional (recomendado para tutoriais) |
-| **Kore** | Firme e direta |
-| **Aoede** | Suave e acolhedora |
-| **Puck** | Expressivo e dinâmico |
-| **Fenrir** | Grave e imponente |
-| **Leda** | Clara e articulada |
-| **Orus** | Neutro e equilibrado |
-| **Zephyr** | Leve e fluida |
-| *(+ Novas)* | Alnilam, Enceladus, Gacrux, Umbriel, Schedar |
-
----
-
-## 📁 Estrutura Atualizada
-
+```bash
+docker compose up -d --build
 ```
+
+Ver status:
+
+```bash
+docker compose ps
+```
+
+Ver logs:
+
+```bash
+docker compose logs -f
+```
+
+Ver logs de um servico especifico:
+
+```bash
+docker compose logs -f backend
+docker compose logs -f frontend
+```
+
+Parar tudo:
+
+```bash
+docker compose down
+```
+
+## Estrutura Docker
+
+```text
 tts_app/
-├── app.py              ← Backend Flask + Novas rotas (/generate-stream, /scriptify, /assemble)
-├── index.html          ← Interface web completa (Cards de URL, Áudio e Montagem)
-├── requirements.txt    ← Dependências atualizadas do Python
-├── .env.example        ← Modelo de variáveis de ambiente
-└── README.md           ← Este arquivo
+├── Dockerfile                 # Imagem do backend FastAPI
+├── docker-compose.yml         # Orquestra backend e frontend
+├── .dockerignore
+├── app/
+│   ├── main.py                # Entrypoint FastAPI: app.main:app
+│   └── ...
+├── frontend/
+│   ├── Dockerfile             # Build Vite + Nginx
+│   ├── nginx.conf             # Serve frontend e proxy /api para o backend
+│   ├── .dockerignore
+│   └── ...
+├── requirements.txt
+├── storage/                   # Persistencia local montada no container
+└── .env.example
+```
+
+## Servicos
+
+O `docker-compose.yml` sobe dois servicos:
+
+- `backend`: FastAPI com Uvicorn em `0.0.0.0:8000`
+- `frontend`: Nginx servindo o build do React em `localhost:5173`
+
+O Nginx do frontend redireciona `/api/*` para o backend interno `http://backend:8000/*`.
+
+## Desenvolvimento Sem Docker
+
+O fluxo recomendado agora e Docker. Caso precise rodar localmente sem containers:
+
+Backend:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+No modo Vite dev, o frontend roda em `http://localhost:5173` e usa o proxy `/api` configurado em `frontend/vite.config.ts`.
+
+## Funcionalidades
+
+- Geracao de audio TTS com Gemini
+- Streaming de TTS para textos longos
+- Roteirizacao a partir de texto ou URL
+- Geracao de ideias e Shorts
+- Pacote de producao para Shorts
+- Busca e download de b-roll em fontes publicas
+- Montagem de videos com FFmpeg
+- Integracoes com YouTube Data API e YouTube Analytics
+- Registro de uso/custos de IA
+
+## Testes E Validacao Rapida
+
+Com os containers de pe:
+
+```bash
+curl http://localhost:8000/health
+curl http://localhost:5173/api/health
+```
+
+Ambos devem retornar:
+
+```json
+{"status":"ok"}
 ```

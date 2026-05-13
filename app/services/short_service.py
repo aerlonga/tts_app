@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from shorts_contract import SHORTS_SYSTEM_PROMPT, extract_json_block, normalize_short_item
+
+from app.core.runtime import SHORTS_SYSTEM_PROMPT, extract_json_block, normalize_short_item
 
 if TYPE_CHECKING:
     from app.services.gemini_service import GeminiService

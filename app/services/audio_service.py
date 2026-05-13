@@ -9,8 +9,8 @@ import time
 import uuid
 import wave
 
-from app import STREAM_CHUNK_MAX_CHARS, STREAM_THROTTLE_SECONDS, chunk_text
 from app.core.config import get_settings
+from app.core.runtime import STREAM_CHUNK_MAX_CHARS, STREAM_THROTTLE_SECONDS, chunk_text
 from app.services.gemini_service import GeminiService, gemini_service
 from app.storage.local_storage import ensure_storage_layout
 

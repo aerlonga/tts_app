@@ -4,7 +4,7 @@ import hashlib
 import json
 from datetime import datetime
 
-from app import extract_json_block
+from app.core.runtime import extract_json_block
 from app.repositories.idea_repository import IdeaRepository
 from app.services.gemini_service import GeminiService, gemini_service
 
