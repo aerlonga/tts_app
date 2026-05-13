@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import math
 import re
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 import requests
 
@@ -71,7 +71,7 @@ class YouTubeDataService:
         published = cls._parse_datetime(published_at)
         if not published:
             return 0.0
-        days = max((datetime.now(UTC) - published.astimezone(UTC)).days, 1)
+        days = max((datetime.now(timezone.utc) - published.astimezone(timezone.utc)).days, 1)
         return round(views / days, 3)
 
     @staticmethod
@@ -99,7 +99,7 @@ class YouTubeDataService:
         published_dt = self._parse_datetime(published_at)
         age_days = 0
         if published_dt:
-            age_days = max((datetime.now(UTC) - published_dt.astimezone(UTC)).days, 0)
+            age_days = max((datetime.now(timezone.utc) - published_dt.astimezone(timezone.utc)).days, 0)
 
         return {
             "youtube_channel_id": item["id"],
