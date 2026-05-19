@@ -46,7 +46,11 @@ class Settings(BaseSettings):
         default_factory=lambda: secrets.token_urlsafe(32),
         validation_alias=AliasChoices("SESSION_SECRET_KEY"),
     )
-    gemini_model: str = Field(default="gemini-1.5-flash", validation_alias=AliasChoices("GEMINI_MODEL"))
+    gemini_model: str = Field(default="gemini-3-flash", validation_alias=AliasChoices("GEMINI_MODEL"))
+    gemini_tts_model: str = Field(
+        default="gemini-3.1-flash-tts-preview",
+        validation_alias=AliasChoices("GEMINI_TTS_MODEL"),
+    )
     gemini_embedding_model: str = Field(
         default="text-embedding-004",
         validation_alias=AliasChoices("GEMINI_EMBEDDING_MODEL"),

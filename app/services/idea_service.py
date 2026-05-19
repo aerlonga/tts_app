@@ -112,7 +112,6 @@ class IdeaService:
             feature="idea_generation",
             contents=prompt,
             api_key=api_key,
-            model="gemini-2.5-flash",
             system_instruction=IDEAS_SYSTEM_PROMPT,
             temperature=0.8,
         )

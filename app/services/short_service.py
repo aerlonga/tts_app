@@ -45,7 +45,6 @@ class ShortService:
             feature="short_generation",
             contents=prompt,
             api_key=api_key,
-            model="gemini-2.5-flash",
             system_instruction=SHORTS_SYSTEM_PROMPT,
             temperature=0.65,
         )

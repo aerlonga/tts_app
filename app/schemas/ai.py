@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 class GenerateAIRequest(BaseModel):
     prompt: str = Field(min_length=1)
     api_key: str | None = None
-    model: str = "gemini-2.5-flash"
+    model: str = "gemini-3-flash"
     system_instruction: str | None = None
     temperature: float = 0.7
     feature: str = "generic_generation"

@@ -89,10 +89,11 @@ class GeminiService:
         feature: str,
         contents: str,
         api_key: str | None = None,
-        model: str = "gemini-2.5-flash",
+        model: str | None = None,
         system_instruction: str | None = None,
         temperature: float = 0.7,
     ) -> dict:
+        model = model or self.settings.gemini_model
         client = self._build_client(api_key)
         response = client.models.generate_content(
             model=model,
@@ -116,8 +117,9 @@ class GeminiService:
         text: str,
         voice: str,
         api_key: str | None = None,
-        model: str = "gemini-2.5-flash-preview-tts",
+        model: str | None = None,
     ) -> dict:
+        model = model or self.settings.gemini_tts_model
         client = self._build_client(api_key)
         response = client.models.generate_content(
             model=model,

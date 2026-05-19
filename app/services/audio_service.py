@@ -37,7 +37,7 @@ class AudioService:
             text=text,
             voice=voice,
             api_key=api_key,
-            model="gemini-2.5-flash-preview-tts",
+            model=self.settings.gemini_tts_model,
         )
         return {"wav_bytes": self.pcm_to_wav_bytes(result["audio_data"]), "usage": result["usage"]}
 
@@ -88,7 +88,7 @@ class AudioService:
                     text=chunk,
                     voice=voice,
                     api_key=api_key,
-                    model="gemini-3.1-flash-tts-preview",
+                    model=self.settings.gemini_tts_model,
                 )
                 with open(chunk_path, "wb") as file_obj:
                     file_obj.write(result["audio_data"])

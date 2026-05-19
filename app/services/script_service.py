@@ -18,7 +18,6 @@ class ScriptService:
             feature="enhance_script",
             contents=text,
             api_key=api_key,
-            model="gemini-2.5-flash",
             system_instruction=ENHANCE_SYSTEM_PROMPT,
             temperature=0.4,
         )
@@ -37,7 +36,6 @@ class ScriptService:
             feature="video_script",
             contents=raw_text,
             api_key=api_key,
-            model="gemini-2.5-flash",
             system_instruction=SCRIPTIFY_SYSTEM_PROMPT,
             temperature=0.7,
         )
