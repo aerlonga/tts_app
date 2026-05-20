@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CheckCircle2, KeyRound, Mic2, Settings2 } from 'lucide-react';
+import { CheckCircle2, KeyRound, Languages, Mic2, Settings2 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 
 interface HeaderProps {
@@ -9,6 +9,12 @@ interface HeaderProps {
 export function Header({ authenticated }: HeaderProps) {
   const selectedVoice = useAppStore((state) => state.selectedVoice);
   const hasAudio = useAppStore((state) => Boolean(state.generatedAudio));
+  const language = useAppStore((state) => state.language);
+  const setLanguage = useAppStore((state) => state.setLanguage);
+
+  function toggleLanguage() {
+    setLanguage(language === 'pt' ? 'en' : 'pt');
+  }
 
   return (
     <header className="mb-8 flex flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[linear-gradient(135deg,rgba(20,23,32,0.96),rgba(8,10,12,0.96))] px-5 py-5 md:flex-row md:items-center md:justify-between">
@@ -30,6 +36,21 @@ export function Header({ authenticated }: HeaderProps) {
           <CheckCircle2 className={`h-4 w-4 ${hasAudio ? 'text-[var(--green)]' : 'text-[var(--text3)]'}`} />
           Áudio {hasAudio ? 'pronto' : 'pendente'}
         </div>
+
+        {/* Language toggle */}
+        <button
+          id="header-language-toggle"
+          type="button"
+          onClick={toggleLanguage}
+          title={language === 'pt' ? 'Mudar para English' : 'Mudar para Português'}
+          className="inline-flex items-center gap-2 rounded-full border border-[var(--border2)] bg-[var(--bg2)] px-4 py-2 text-[var(--text2)] transition hover:border-[var(--amber)] hover:text-[var(--amber)]"
+        >
+          <Languages className="h-4 w-4" />
+          <span className="font-semibold tracking-wide">
+            {language === 'pt' ? 'PT' : 'EN'}
+          </span>
+        </button>
+
         <Link
           to="/settings"
           className="inline-flex items-center gap-2 rounded-full border border-[var(--amber)] bg-[var(--amber)]/10 px-4 py-2 text-[var(--amber)] transition hover:bg-[var(--amber)]/20"

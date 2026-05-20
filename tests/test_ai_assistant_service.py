@@ -17,7 +17,7 @@ class FakeGeminiService:
                 "id": 1,
                 "feature": "assistant_chat",
                 "provider": "gemini",
-                "model": "gemini-1.5-flash",
+                "model": "gemini-2.5-flash",
                 "input_tokens": 120,
                 "output_tokens": 40,
                 "estimated_cost_usd": 0.0,

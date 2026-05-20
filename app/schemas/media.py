@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, HttpUrl
 class EnhanceRequest(BaseModel):
     api_key: str | None = None
     text: str = Field(min_length=1)
+    language: str = "pt"
 
 
 class EnhanceResponse(BaseModel):
@@ -29,6 +30,7 @@ class ScriptPromptItem(BaseModel):
 class GenerateScriptRequest(BaseModel):
     api_key: str | None = None
     url: HttpUrl
+    language: str = "pt"
 
 
 class GenerateScriptResponse(BaseModel):
@@ -80,6 +82,7 @@ class GenerateShortRequest(BaseModel):
     script: str = Field(min_length=500)
     count: int = 3
     duration_seconds: int = 60
+    language: str = "pt"
 
 
 class GenerateShortResponse(BaseModel):

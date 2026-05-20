@@ -5,7 +5,7 @@ import re
 
 from newspaper import Article
 
-from app.core.runtime import ENHANCE_SYSTEM_PROMPT, SCRIPTIFY_SYSTEM_PROMPT
+from app.core.runtime import ENHANCE_SYSTEM_PROMPT, SCRIPTIFY_SYSTEM_PROMPT, get_system_prompt
 from app.services.gemini_service import GeminiService, gemini_service
 
 
@@ -13,17 +13,17 @@ class ScriptService:
     def __init__(self, gemini: GeminiService | None = None) -> None:
         self.gemini = gemini or gemini_service
 
-    def enhance_script(self, *, text: str, api_key: str | None = None) -> dict:
+    def enhance_script(self, *, text: str, api_key: str | None = None, language: str = "pt") -> dict:
         result = self.gemini.generate_text(
             feature="enhance_script",
             contents=text,
             api_key=api_key,
-            system_instruction=ENHANCE_SYSTEM_PROMPT,
+            system_instruction=get_system_prompt("enhance", language),
             temperature=0.4,
         )
         return {"enhanced_text": result["text"], "usage": result["usage"]}
 
-    def generate_script_from_url(self, *, url: str, api_key: str | None = None) -> dict:
+    def generate_script_from_url(self, *, url: str, api_key: str | None = None, language: str = "pt") -> dict:
         article = Article(url)
         article.download()
         article.parse()
@@ -36,7 +36,7 @@ class ScriptService:
             feature="video_script",
             contents=raw_text,
             api_key=api_key,
-            system_instruction=SCRIPTIFY_SYSTEM_PROMPT,
+            system_instruction=get_system_prompt("scriptify", language),
             temperature=0.7,
         )
         full_response = result["text"]

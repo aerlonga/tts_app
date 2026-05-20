@@ -1,5 +1,6 @@
 export interface EnhanceRequest {
   text: string;
+  language?: string;
 }
 
 export interface EnhanceResponse {
@@ -8,6 +9,7 @@ export interface EnhanceResponse {
 
 export interface GenerateScriptRequest {
   url: string;
+  language?: string;
 }
 
 export interface ScriptPromptItem {
@@ -64,6 +66,7 @@ export interface GenerateShortRequest {
   script: string;
   count: number;
   duration_seconds: number;
+  language?: string;
 }
 
 export interface GenerateShortResponse {

@@ -13,7 +13,7 @@ class UsageRepositoryFiltersTestCase(unittest.TestCase):
                 AIUsageLogRecord(
                     feature="video_script_generation",
                     provider="gemini",
-                    model="gemini-1.5-flash",
+                    model="gemini-2.5-flash",
                     input_tokens=100,
                     output_tokens=50,
                     estimated_cost_usd=1.5,

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from app.core.runtime import SHORTS_SYSTEM_PROMPT, extract_json_block, normalize_short_item
+from app.core.runtime import SHORTS_SYSTEM_PROMPT, extract_json_block, get_system_prompt, normalize_short_item
 
 if TYPE_CHECKING:
     from app.services.gemini_service import GeminiService
@@ -24,6 +24,7 @@ class ShortService:
         count: int = 3,
         duration_seconds: int = 60,
         api_key: str | None = None,
+        language: str = "pt",
     ) -> dict:
         count = 2 if count == 2 else 3
         duration_seconds = duration_seconds if duration_seconds in (45, 60, 65) else 60
@@ -45,7 +46,7 @@ class ShortService:
             feature="short_generation",
             contents=prompt,
             api_key=api_key,
-            system_instruction=SHORTS_SYSTEM_PROMPT,
+            system_instruction=get_system_prompt("shorts", language),
             temperature=0.65,
         )
 

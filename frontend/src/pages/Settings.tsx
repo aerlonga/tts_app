@@ -5,9 +5,12 @@ import { Alert } from '@/components/common/Alert';
 import { Loading } from '@/components/common/Loading';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/api/client';
+import { useAppStore } from '@/stores/appStore';
 
 export function Settings() {
   const { data, login, logout, loginPending, logoutPending } = useAuth();
+  const language = useAppStore((state) => state.language);
+  const setLanguage = useAppStore((state) => state.setLanguage);
   const healthQuery = useQuery({
     queryKey: ['health-details', 'settings'],
     queryFn: getHealthDetails,
@@ -80,6 +83,45 @@ export function Settings() {
         </div>
 
         {feedback ? <Alert tone={feedback.tone} message={feedback.message} /> : null}
+      </div>
+
+      {/* Language selector */}
+      <div className="space-y-4 rounded-[32px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(14,16,20,0.96),rgba(8,10,12,0.96))] p-6">
+        <div>
+          <p className="text-xs uppercase tracking-[0.32em] text-[var(--amber)]">Idioma do Conteúdo</p>
+          <h3 className="mt-3 font-display text-4xl uppercase tracking-[0.08em] text-[var(--text)]">
+            {language === 'pt' ? 'Português' : 'English'}
+          </h3>
+          <p className="mt-2 text-sm text-[var(--text2)]">
+            Define o idioma dos roteiros, entonação e shorts gerados pelo Gemini.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            id="settings-lang-pt"
+            type="button"
+            onClick={() => setLanguage('pt')}
+            className={`rounded-full border px-6 py-2 text-sm font-semibold tracking-wide transition ${
+              language === 'pt'
+                ? 'border-[var(--amber)] bg-[var(--amber)]/15 text-[var(--amber)]'
+                : 'border-[var(--border2)] text-[var(--text2)] hover:border-[var(--amber)] hover:text-[var(--amber)]'
+            }`}
+          >
+            🇧🇷 Português
+          </button>
+          <button
+            id="settings-lang-en"
+            type="button"
+            onClick={() => setLanguage('en')}
+            className={`rounded-full border px-6 py-2 text-sm font-semibold tracking-wide transition ${
+              language === 'en'
+                ? 'border-[var(--amber)] bg-[var(--amber)]/15 text-[var(--amber)]'
+                : 'border-[var(--border2)] text-[var(--text2)] hover:border-[var(--amber)] hover:text-[var(--amber)]'
+            }`}
+          >
+            🇺🇸 English
+          </button>
+        </div>
       </div>
 
       <div className="rounded-[32px] border border-[var(--border)] bg-[var(--bg2)] p-6">

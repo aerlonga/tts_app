@@ -17,12 +17,14 @@ export interface AssemblyAsset {
 
 interface AppStoreState {
   selectedVoice: string;
+  language: 'pt' | 'en';
   scriptDraft: string;
   imagePrompts: ScriptPromptItem[];
   ttsText: string;
   generatedAudio: File | null;
   assemblyAssets: AssemblyAsset[];
   setSelectedVoice: (voice: string) => void;
+  setLanguage: (language: 'pt' | 'en') => void;
   setScriptBundle: (payload: { script: string; prompts: ScriptPromptItem[] }) => void;
   setTtsText: (text: string) => void;
   setGeneratedAudio: (file: File | null) => void;
@@ -39,12 +41,14 @@ function toAssetId() {
 
 export const useAppStore = create<AppStoreState>((set) => ({
   selectedVoice: 'Charon',
+  language: 'pt',
   scriptDraft: '',
   imagePrompts: [],
   ttsText: '',
   generatedAudio: null,
   assemblyAssets: [],
   setSelectedVoice: (voice) => set({ selectedVoice: voice }),
+  setLanguage: (language) => set({ language }),
   setScriptBundle: ({ script, prompts }) =>
     set({
       scriptDraft: script,

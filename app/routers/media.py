@@ -34,6 +34,7 @@ def enhance(request: Request, payload: EnhanceRequest) -> EnhanceResponse:
         result = script_service.enhance_script(
             text=payload.text,
             api_key=resolve_gemini_api_key(request, payload.api_key),
+            language=payload.language,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -87,6 +88,7 @@ def generate_script(request: Request, payload: GenerateScriptRequest) -> Generat
         result = script_service.generate_script_from_url(
             url=str(payload.url),
             api_key=resolve_gemini_api_key(request, payload.api_key),
+            language=payload.language,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -108,6 +110,7 @@ def generate_short(request: Request, payload: GenerateShortRequest) -> GenerateS
             count=payload.count,
             duration_seconds=payload.duration_seconds,
             api_key=resolve_gemini_api_key(request, payload.api_key),
+            language=payload.language,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

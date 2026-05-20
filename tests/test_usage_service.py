@@ -15,7 +15,7 @@ class UsageServiceTestCase(unittest.TestCase):
                 AIUsageLogRecord(
                     feature="assistant_chat",
                     provider="gemini",
-                    model="gemini-1.5-flash",
+                    model="gemini-2.5-flash",
                     input_tokens=100,
                     output_tokens=50,
                     estimated_cost_usd=0.12,

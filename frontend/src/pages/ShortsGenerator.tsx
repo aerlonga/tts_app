@@ -10,6 +10,7 @@ import type { ShortItem } from '@/types/media';
 
 export function ShortsGenerator() {
   const selectedVoice = useAppStore((state) => state.selectedVoice);
+  const language = useAppStore((state) => state.language);
   const [script, setScript] = useState('');
   const [count, setCount] = useState(3);
   const [duration, setDuration] = useState(60);
@@ -69,7 +70,7 @@ export function ShortsGenerator() {
 
           <button
             type="button"
-            onClick={() => mutation.mutate({ script, count, duration_seconds: duration })}
+            onClick={() => mutation.mutate({ script, count, duration_seconds: duration, language })}
             disabled={mutation.isPending || script.trim().length < 500}
             className="rounded-full border border-[var(--amber)] bg-[var(--amber)]/10 px-4 py-3 text-sm text-[var(--amber)] transition hover:bg-[var(--amber)]/20 disabled:opacity-50"
           >

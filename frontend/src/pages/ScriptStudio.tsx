@@ -14,6 +14,7 @@ export function ScriptStudio() {
   const imagePrompts = useAppStore((state) => state.imagePrompts);
   const scriptDraft = useAppStore((state) => state.scriptDraft);
   const setTtsText = useAppStore((state) => state.setTtsText);
+  const language = useAppStore((state) => state.language);
 
   const [url, setUrl] = useState('');
   const [scriptText, setScriptText] = useState(scriptDraft);
@@ -69,7 +70,7 @@ export function ScriptStudio() {
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => generateMutation.mutate({ url })}
+              onClick={() => generateMutation.mutate({ url, language })}
               disabled={generateMutation.isPending || !url.trim()}
               className="rounded-full border border-[var(--amber)] bg-[var(--amber)]/10 px-4 py-2 text-sm text-[var(--amber)] transition hover:bg-[var(--amber)]/20 disabled:opacity-50"
             >
@@ -77,7 +78,7 @@ export function ScriptStudio() {
             </button>
             <button
               type="button"
-              onClick={() => enhanceMutation.mutate({ text: scriptText })}
+              onClick={() => enhanceMutation.mutate({ text: scriptText, language })}
               disabled={enhanceMutation.isPending || !scriptText.trim()}
               className="rounded-full border border-[var(--border2)] px-4 py-2 text-sm text-[var(--text)] transition hover:border-[var(--blue)] hover:text-[var(--blue)] disabled:opacity-50"
             >
