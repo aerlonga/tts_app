@@ -40,6 +40,10 @@ class ShortService:
             f"Platform: {platform}.\n"
             f"Generate exactly {count} vertical videos.\n"
             f"{duration_rule}\n\n"
+            "For each generated short, make `flow_video_prompt` and `whisk_image_prompts` follow the exact chronological "
+            "order of that short's `script`. Treat them as slots 0 to 5 in the final edit: slot 0 is the opening video, "
+            "then scenes 1 to 5 continue the narration in order. Do not use a later climax as the Flow prompt unless it "
+            "is the first narrated hook.\n\n"
             f"LONG DOCUMENTARY SCRIPT:\n{script}"
         )
         result = self.gemini.generate_text(

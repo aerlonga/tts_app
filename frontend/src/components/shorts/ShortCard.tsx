@@ -18,6 +18,19 @@ interface ShortCardProps {
   defaultVoice: string;
 }
 
+const assetNameSorter = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
+function sortTemplateAssets(files: File[]) {
+  return [...files].sort((left, right) => {
+    const leftIsVideo = left.type.startsWith('video/');
+    const rightIsVideo = right.type.startsWith('video/');
+    if (leftIsVideo !== rightIsVideo) {
+      return leftIsVideo ? -1 : 1;
+    }
+    return assetNameSorter.compare(left.name, right.name);
+  });
+}
+
 export function ShortCard({ item, defaultVoice }: ShortCardProps) {
   const [title, setTitle] = useState(item.title);
   const [script, setScript] = useState(item.script);
@@ -193,18 +206,20 @@ export function ShortCard({ item, defaultVoice }: ShortCardProps) {
           </div>
 
           <FileUpload
-            onFiles={(files) => setAssetFiles(files.slice(0, 6))}
+            onFiles={(files) => setAssetFiles(sortTemplateAssets(files).slice(0, 6))}
             accept="video/*,image/*"
             multiple
             title="Assets do template"
-            description="Envie 6 arquivos na ordem da timeline do production pack. O slot 1 precisa ser vídeo; os demais, imagens."
+            description="Envie 1 vídeo e 5 imagens com prefixos 01 a 05. O vídeo fica no slot 0; as imagens são ordenadas pelo nome."
           />
 
           <div className="rounded-[24px] border border-[var(--border)] bg-[var(--bg2)] p-4 text-sm text-[var(--text2)]">
             <p className="text-xs uppercase tracking-[0.24em] text-[var(--text3)]">Arquivos enviados</p>
             <ol className="mt-3 space-y-2">
               {assetFiles.map((file, index) => (
-                <li key={`${file.name}_${index}`}>{index + 1}. {file.name}</li>
+                <li key={`${file.name}_${index}`}>
+                  Slot {index}: {file.name}
+                </li>
               ))}
             </ol>
           </div>

@@ -4,7 +4,6 @@ import json
 import os
 import shutil
 import subprocess
-from pathlib import Path
 from typing import Any
 
 
@@ -119,16 +118,23 @@ def validate_template_manifest(asset_inputs: list[dict[str, Any] | str]) -> list
             raise ValueError(f"Slot {expected_slot} exige um arquivo de video.")
         if expected_kind == "image" and _is_video_asset(path):
             raise ValueError(f"Slot {expected_slot} exige um arquivo de imagem.")
-        if expected_slot in (4, 5):
-            overlay_text = str(asset.get("overlay_text") or "").strip()
-            if not overlay_text:
-                raise ValueError(f"Slot {expected_slot} exige overlay_text.")
-
         total_duration += duration_seconds
 
     if total_duration != TEMPLATE_DURATION_SECONDS:
         raise ValueError("Template production_pack_v1 exige soma total de 62 segundos.")
     return assets
+
+
+def _scaled_template_durations(audio_duration: float) -> dict[int, float]:
+    target_duration = max(audio_duration, TEMPLATE_DURATION_SECONDS)
+    scale = target_duration / TEMPLATE_DURATION_SECONDS
+    durations = {
+        slot_index: expected_duration * scale
+        for slot_index, (_, expected_duration, _) in TEMPLATE_SLOT_PRESETS.items()
+    }
+    drift = target_duration - sum(durations.values())
+    durations[max(durations)] += drift
+    return durations
 
 
 def _resolve_output_size(video_format: str) -> tuple[int, int, int, int]:
@@ -161,57 +167,13 @@ def _build_image_base_filter(work_w: int, work_h: int, is_short: bool) -> str:
     )
 
 
-def _escape_drawtext_text(text: str) -> str:
-    escaped = text.replace("\\", "\\\\")
-    for old, new in (
-        (":", "\\:"),
-        ("'", "\\'"),
-        ("%", "\\%"),
-        (",", "\\,"),
-        ("[", "\\["),
-        ("]", "\\]"),
-    ):
-        escaped = escaped.replace(old, new)
-    return escaped
-
-
-def _find_drawtext_fontfile() -> str | None:
-    candidates = (
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/TTF/DejaVuSans.ttf",
-        "/Library/Fonts/Arial Unicode.ttf",
-        "C:/Windows/Fonts/arial.ttf",
-    )
-    for candidate in candidates:
-        if Path(candidate).exists():
-            return candidate
-    return None
-
-
-def _drawtext_filter(text: str, out_h: int) -> str:
-    escaped = _escape_drawtext_text(text)
-    fontfile = _find_drawtext_fontfile()
-    font_part = f":fontfile='{fontfile}'" if fontfile else ""
-    y_pos = int(out_h * 0.72)
-    return (
-        "drawtext="
-        f"text='{escaped}'"
-        f"{font_part}"
-        ":fontsize=58:fontcolor=white"
-        f":x=(w-text_w)/2:y={y_pos}"
-        ":box=1:boxcolor=black@0.58:boxborderw=28"
-    )
-
-
 def _template_image_filter(
     preset: str,
-    duration_seconds: int,
+    duration_seconds: float,
     out_w: int,
     out_h: int,
     work_w: int,
     work_h: int,
-    overlay_text: str | None,
 ) -> str:
     fps = 25
     d_frames = max(int(duration_seconds * fps), 1)
@@ -261,8 +223,6 @@ def _template_image_filter(
         + motion
         + f":d={d_frames}:s={out_w}x{out_h}:fps={fps}"
     )
-    if overlay_text:
-        vf = f"{vf},{_drawtext_filter(overlay_text, out_h)}"
     return vf
 
 
@@ -370,23 +330,26 @@ def _assemble_template_video(
     out_w, out_h, work_w, work_h = _resolve_output_size("short")
     fps = 25
     clip_paths: list[str] = []
+    slot_durations = _scaled_template_durations(get_audio_duration(audio_path))
 
     for idx, asset in enumerate(assets):
         asset_path = asset["path"]
         clip_path = os.path.join(job_dir, f"clip_{idx:04d}.mp4")
-        duration_seconds = int(asset["duration_seconds"])
+        slot_index = int(asset["slot_index"])
+        duration_seconds = slot_durations[slot_index]
         motion_preset = str(asset["motion_preset"])
-        overlay_text = asset.get("overlay_text")
 
         if motion_preset == "flow_open":
             vf = _build_video_scale_filter(out_w, out_h, True)
             cmd = [
                 "ffmpeg",
                 "-y",
+                "-stream_loop",
+                "-1",
                 "-i",
                 asset_path,
                 "-t",
-                str(duration_seconds),
+                f"{duration_seconds:.3f}",
                 "-vf",
                 vf,
                 "-r",
@@ -407,7 +370,6 @@ def _assemble_template_video(
                 out_h,
                 work_w,
                 work_h,
-                str(overlay_text or "").strip() or None,
             )
             cmd = [
                 "ffmpeg",
@@ -419,7 +381,7 @@ def _assemble_template_video(
                 "-vf",
                 vf,
                 "-t",
-                str(duration_seconds),
+                f"{duration_seconds:.3f}",
                 "-r",
                 str(fps),
                 "-c:v",

@@ -125,7 +125,18 @@ RULES:
 9. Do not invent facts beyond the source script.
 10. Use plain narration text. No timestamps, no bullet points inside the script.
 11. For the production workflow, provide exactly 1 Flow video prompt and exactly 5 Whisk image prompts per short.
-12. `caption_text` must be a punchy on-screen line for the fifth segment. `cta_text` must be a short final on-screen CTA for the sixth segment.
+12. `caption_text` and `cta_text` are planning metadata only. Do not include instructions to burn visible text, subtitles, labels, or captions into the video/image prompts.
+13. Build the production prompts from the final short script itself, not from random dramatic moments in the source documentary.
+14. Before writing prompts, mentally divide the final short script into exactly 6 chronological visual beats:
+    - Slot 0 / Flow video prompt: the opening beat from the first seconds of the narration, usually the hook or setup.
+    - Slot 1 / Whisk Scene 1: the next beat in the narration.
+    - Slot 2 / Whisk Scene 2: the next beat after Scene 1.
+    - Slot 3 / Whisk Scene 3: the next beat after Scene 2.
+    - Slot 4 / Whisk Scene 4: the penultimate beat.
+    - Slot 5 / Whisk Scene 5: the final beat, matching the CTA or final revelation without visible text.
+15. The Flow prompt must NOT jump ahead to a later attack, death, reveal, or climax unless that event is literally the first narrated hook.
+16. The five Whisk prompts must stay in the same chronological order as the short script. Do not reverse the order, do not start with the ending, and do not duplicate the Flow moment unless the narration repeats it.
+17. Each prompt must describe what the viewer should see at that exact beat, including named people, setting, emotional state, and action from the script.
 
 Return this JSON shape:
 {
@@ -173,7 +184,18 @@ REGRAS:
 9. Não invente fatos além do roteiro de origem.
 10. Use texto de narração simples. Sem timestamps, sem marcadores dentro do script.
 11. Para o fluxo de produção, forneça exatamente 1 prompt de vídeo Flow e exatamente 5 prompts de imagem Whisk por short.
-12. `caption_text` deve ser uma linha impactante na tela para o quinto segmento. `cta_text` deve ser um CTA final curto para o sexto segmento.
+12. `caption_text` e `cta_text` sao apenas metadados de planejamento. Nao inclua instrucoes para queimar texto visivel, legendas, rotulos ou captions nos prompts de video/imagem.
+13. Monte os prompts de produção a partir do script final do short, não a partir de momentos dramáticos aleatórios do documentário de origem.
+14. Antes de escrever os prompts, divida mentalmente o script final do short em exatamente 6 beats visuais cronológicos:
+    - Slot 0 / prompt de vídeo Flow: o beat de abertura dos primeiros segundos da narração, normalmente o gancho ou setup.
+    - Slot 1 / Whisk Cena 1: o próximo beat da narração.
+    - Slot 2 / Whisk Cena 2: o próximo beat depois da Cena 1.
+    - Slot 3 / Whisk Cena 3: o próximo beat depois da Cena 2.
+    - Slot 4 / Whisk Cena 4: o penúltimo beat.
+    - Slot 5 / Whisk Cena 5: o beat final, alinhado com o CTA ou revelação final sem texto visivel.
+15. O prompt Flow NÃO deve pular para um ataque, morte, revelação ou clímax posterior, a menos que esse evento esteja literalmente no primeiro gancho narrado.
+16. Os cinco prompts Whisk devem permanecer na mesma ordem cronológica do script do short. Não inverta a ordem, não comece pelo final e não duplique o momento do Flow, a menos que a narração repita esse momento.
+17. Cada prompt deve descrever o que o espectador deve ver naquele beat exato, incluindo pessoas nomeadas, cenário, estado emocional e ação do script.
 
 Retorne este formato JSON:
 {
@@ -342,12 +364,7 @@ def _build_production_pack(item: dict, image_prompts: list[dict[str, str]]) -> d
 
     timeline_segments = []
     for segment in PRODUCTION_PACK_SEGMENTS:
-        overlay_text = None
-        if segment["slot_index"] == 4:
-            overlay_text = caption_text
-        elif segment["slot_index"] == 5:
-            overlay_text = cta_text
-        timeline_segments.append({**segment, "overlay_text": overlay_text})
+        timeline_segments.append({**segment, "overlay_text": None})
 
     return {
         "template_id": PRODUCTION_PACK_TEMPLATE_ID,

@@ -15,7 +15,6 @@ export function TimelineView({ segments }: TimelineViewProps) {
             {segment.asset_kind} / {segment.motion_preset}
           </p>
           <p className="mt-1 text-sm text-[var(--text2)]">{formatDuration(segment.duration_seconds)}</p>
-          {segment.overlay_text ? <p className="mt-3 text-sm text-[var(--text)]">Overlay: {segment.overlay_text}</p> : null}
         </div>
       ))}
     </div>
