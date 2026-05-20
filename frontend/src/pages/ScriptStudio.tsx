@@ -36,8 +36,8 @@ export function ScriptStudio() {
     mutationFn: enhanceText,
     onSuccess: (data) => {
       setScriptText(data.enhanced_text);
-      setScriptBundle({ script: data.enhanced_text, prompts: imagePrompts });
-      setFeedback({ tone: 'success', message: 'Entonação aplicada ao roteiro.' });
+      setScriptBundle({ script: data.enhanced_text, prompts: data.image_prompts });
+      setFeedback({ tone: 'success', message: 'Entonação aplicada e prompts de imagem gerados.' });
     },
     onError: (error) => {
       setFeedback({ tone: 'error', message: getErrorMessage(error, 'Falha ao melhorar roteiro.') });
@@ -78,7 +78,7 @@ export function ScriptStudio() {
             </button>
             <button
               type="button"
-              onClick={() => enhanceMutation.mutate({ text: scriptText, language })}
+              onClick={() => enhanceMutation.mutate({ text: scriptText, language, generate_image_prompts: true })}
               disabled={enhanceMutation.isPending || !scriptText.trim()}
               className="rounded-full border border-[var(--border2)] px-4 py-2 text-sm text-[var(--text)] transition hover:border-[var(--blue)] hover:text-[var(--blue)] disabled:opacity-50"
             >
@@ -132,7 +132,7 @@ export function ScriptStudio() {
               ))}
             </div>
           ) : (
-            <EmptyState title="Sem prompts" description="Gere um roteiro a partir de uma URL para popular o painel de prompts visuais." />
+            <EmptyState title="Sem prompts" description="Gere um roteiro a partir de uma URL ou use Entonação Inteligente em um roteiro pronto." />
           )}
         </div>
       </div>

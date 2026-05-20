@@ -5,10 +5,18 @@ class EnhanceRequest(BaseModel):
     api_key: str | None = None
     text: str = Field(min_length=1)
     language: str = "pt"
+    generate_image_prompts: bool = False
+
+
+class ScriptPromptItem(BaseModel):
+    timestamp: str = "00:00"
+    cue: str = ""
+    prompt: str
 
 
 class EnhanceResponse(BaseModel):
     enhanced_text: str
+    image_prompts: list[ScriptPromptItem] = Field(default_factory=list)
 
 
 class GenerateTTSRequest(BaseModel):
@@ -19,12 +27,6 @@ class GenerateTTSRequest(BaseModel):
 
 class GenerateTTSStreamRequest(GenerateTTSRequest):
     session_id: str | None = None
-
-
-class ScriptPromptItem(BaseModel):
-    timestamp: str = "00:00"
-    cue: str = ""
-    prompt: str
 
 
 class GenerateScriptRequest(BaseModel):

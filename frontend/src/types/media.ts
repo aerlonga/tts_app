@@ -1,10 +1,12 @@
 export interface EnhanceRequest {
   text: string;
   language?: string;
+  generate_image_prompts?: boolean;
 }
 
 export interface EnhanceResponse {
   enhanced_text: string;
+  image_prompts: ScriptPromptItem[];
 }
 
 export interface GenerateScriptRequest {

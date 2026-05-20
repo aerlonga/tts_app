@@ -35,12 +35,13 @@ def enhance(request: Request, payload: EnhanceRequest) -> EnhanceResponse:
             text=payload.text,
             api_key=resolve_gemini_api_key(request, payload.api_key),
             language=payload.language,
+            generate_image_prompts=payload.generate_image_prompts,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    return EnhanceResponse(enhanced_text=result["enhanced_text"])
+    return EnhanceResponse(enhanced_text=result["enhanced_text"], image_prompts=result["image_prompts"])
 
 
 @router.post("/generate-tts")
