@@ -118,6 +118,7 @@ class GeminiService:
         voice: str,
         api_key: str | None = None,
         model: str | None = None,
+        language_code: str = "pt-BR",
     ) -> dict:
         model = model or self.settings.gemini_tts_model
         client = self._build_client(api_key)
@@ -127,7 +128,7 @@ class GeminiService:
             config=types.GenerateContentConfig(
                 response_modalities=["AUDIO"],
                 speech_config=types.SpeechConfig(
-                    language_code="en-US",
+                    language_code=language_code,
                     voice_config=types.VoiceConfig(
                         prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice)
                     ),

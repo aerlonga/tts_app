@@ -23,6 +23,7 @@ class GenerateTTSRequest(BaseModel):
     api_key: str | None = None
     text: str = Field(min_length=1)
     voice: str = "Charon"
+    language: str = "pt"
 
 
 class GenerateTTSStreamRequest(GenerateTTSRequest):

@@ -51,6 +51,7 @@ def generate_tts(request: Request, payload: GenerateTTSRequest) -> Response:
             text=payload.text,
             voice=payload.voice,
             api_key=resolve_gemini_api_key(request, payload.api_key),
+            language=payload.language,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -69,6 +70,7 @@ def generate_tts_stream(request: Request, payload: GenerateTTSStreamRequest) -> 
             voice=payload.voice,
             api_key=resolve_gemini_api_key(request, payload.api_key),
             session_id=payload.session_id,
+            language=payload.language,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

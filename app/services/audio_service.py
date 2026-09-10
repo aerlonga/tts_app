@@ -10,6 +10,7 @@ import uuid
 import wave
 
 from app.core.config import get_settings
+from app.core.pronunciation import apply_pronunciation, resolve_language_code
 from app.core.runtime import STREAM_CHUNK_MAX_CHARS, STREAM_THROTTLE_SECONDS, chunk_text
 from app.services.gemini_service import GeminiService, gemini_service
 from app.storage.local_storage import ensure_storage_layout
@@ -31,24 +32,39 @@ class AudioService:
         buffer.seek(0)
         return buffer.read()
 
-    def generate_tts_wav_bytes(self, *, text: str, voice: str, api_key: str | None = None) -> dict:
+    def generate_tts_wav_bytes(
+        self, *, text: str, voice: str, api_key: str | None = None, language: str = "pt"
+    ) -> dict:
         result = self.gemini.generate_audio_pcm(
             feature="tts",
-            text=text,
+            text=apply_pronunciation(text, language=language),
             voice=voice,
             api_key=api_key,
             model=self.settings.gemini_tts_model,
+            language_code=resolve_language_code(language),
         )
         return {"wav_bytes": self.pcm_to_wav_bytes(result["audio_data"]), "usage": result["usage"]}
 
-    def generate_tts_to_path(self, *, text: str, voice: str, output_path: str, api_key: str | None = None) -> dict:
-        result = self.generate_tts_wav_bytes(text=text, voice=voice, api_key=api_key)
+    def generate_tts_to_path(
+        self, *, text: str, voice: str, output_path: str, api_key: str | None = None, language: str = "pt"
+    ) -> dict:
+        result = self.generate_tts_wav_bytes(text=text, voice=voice, api_key=api_key, language=language)
         with open(output_path, "wb") as wav_file:
             wav_file.write(result["wav_bytes"])
         return result
 
-    def stream_tts_events(self, *, text: str, voice: str, api_key: str | None = None, session_id: str | None = None):
+    def stream_tts_events(
+        self,
+        *,
+        text: str,
+        voice: str,
+        api_key: str | None = None,
+        session_id: str | None = None,
+        language: str = "pt",
+    ):
         ensure_storage_layout()
+        text = apply_pronunciation(text, language=language)
+        language_code = resolve_language_code(language)
         session_id = session_id or str(uuid.uuid4())
         session_dir = os.path.join(self.settings.tmp_sessions_dir, session_id)
         os.makedirs(session_dir, exist_ok=True)
@@ -89,6 +105,7 @@ class AudioService:
                     voice=voice,
                     api_key=api_key,
                     model=self.settings.gemini_tts_model,
+                    language_code=language_code,
                 )
                 with open(chunk_path, "wb") as file_obj:
                     file_obj.write(result["audio_data"])
