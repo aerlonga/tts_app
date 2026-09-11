@@ -36,6 +36,7 @@ def enhance(request: Request, payload: EnhanceRequest) -> EnhanceResponse:
             api_key=resolve_gemini_api_key(request, payload.api_key),
             language=payload.language,
             generate_image_prompts=payload.generate_image_prompts,
+            style=payload.style,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -92,6 +93,7 @@ def generate_script(request: Request, payload: GenerateScriptRequest) -> Generat
             url=str(payload.url),
             api_key=resolve_gemini_api_key(request, payload.api_key),
             language=payload.language,
+            style=payload.style,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

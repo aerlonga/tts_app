@@ -15,6 +15,7 @@ export function ScriptStudio() {
   const scriptDraft = useAppStore((state) => state.scriptDraft);
   const setTtsText = useAppStore((state) => state.setTtsText);
   const language = useAppStore((state) => state.language);
+  const videoStyle = useAppStore((state) => state.videoStyle);
 
   const [url, setUrl] = useState('');
   const [scriptText, setScriptText] = useState(scriptDraft);
@@ -70,7 +71,7 @@ export function ScriptStudio() {
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => generateMutation.mutate({ url, language })}
+              onClick={() => generateMutation.mutate({ url, language, style: videoStyle })}
               disabled={generateMutation.isPending || !url.trim()}
               className="rounded-full border border-[var(--amber)] bg-[var(--amber)]/10 px-4 py-2 text-sm text-[var(--amber)] transition hover:bg-[var(--amber)]/20 disabled:opacity-50"
             >
@@ -78,7 +79,9 @@ export function ScriptStudio() {
             </button>
             <button
               type="button"
-              onClick={() => enhanceMutation.mutate({ text: scriptText, language, generate_image_prompts: true })}
+              onClick={() =>
+                enhanceMutation.mutate({ text: scriptText, language, generate_image_prompts: true, style: videoStyle })
+              }
               disabled={enhanceMutation.isPending || !scriptText.trim()}
               className="rounded-full border border-[var(--border2)] px-4 py-2 text-sm text-[var(--text)] transition hover:border-[var(--blue)] hover:text-[var(--blue)] disabled:opacity-50"
             >
@@ -125,8 +128,17 @@ export function ScriptStudio() {
                         {prompt.timestamp || '00:00'} {prompt.cue ? `· ${prompt.cue}` : ''}
                       </p>
                       <p className="mt-2 text-sm leading-6 text-[var(--text2)]">{prompt.prompt}</p>
+                      {prompt.video_prompt ? (
+                        <p className="mt-2 text-sm leading-6 text-[var(--blue)]">
+                          <span className="font-semibold">Flow (image-to-video): </span>
+                          {prompt.video_prompt}
+                        </p>
+                      ) : null}
                     </div>
-                    <CopyButton text={prompt.prompt} />
+                    <div className="flex flex-col gap-2">
+                      <CopyButton text={prompt.prompt} />
+                      {prompt.video_prompt ? <CopyButton text={prompt.video_prompt} /> : null}
+                    </div>
                   </div>
                 </div>
               ))}

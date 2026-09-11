@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ScriptPromptItem, TimelineSegment } from '@/types/media';
+import type { ScriptPromptItem, TimelineSegment, VideoStyle } from '@/types/media';
 
 export interface AssemblyAsset {
   id: string;
@@ -18,6 +18,7 @@ export interface AssemblyAsset {
 interface AppStoreState {
   selectedVoice: string;
   language: 'pt' | 'en';
+  videoStyle: VideoStyle;
   scriptDraft: string;
   imagePrompts: ScriptPromptItem[];
   ttsText: string;
@@ -25,6 +26,7 @@ interface AppStoreState {
   assemblyAssets: AssemblyAsset[];
   setSelectedVoice: (voice: string) => void;
   setLanguage: (language: 'pt' | 'en') => void;
+  setVideoStyle: (style: VideoStyle) => void;
   setScriptBundle: (payload: { script: string; prompts: ScriptPromptItem[] }) => void;
   setTtsText: (text: string) => void;
   setGeneratedAudio: (file: File | null) => void;
@@ -42,6 +44,7 @@ function toAssetId() {
 export const useAppStore = create<AppStoreState>((set) => ({
   selectedVoice: 'Charon',
   language: 'pt',
+  videoStyle: 'cinematic',
   scriptDraft: '',
   imagePrompts: [],
   ttsText: '',
@@ -49,6 +52,7 @@ export const useAppStore = create<AppStoreState>((set) => ({
   assemblyAssets: [],
   setSelectedVoice: (voice) => set({ selectedVoice: voice }),
   setLanguage: (language) => set({ language }),
+  setVideoStyle: (style) => set({ videoStyle: style }),
   setScriptBundle: ({ script, prompts }) =>
     set({
       scriptDraft: script,

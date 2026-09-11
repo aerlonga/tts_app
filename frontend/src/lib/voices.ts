@@ -35,4 +35,9 @@ export const VOICES: VoiceOption[] = [
     label: 'Leda',
     desc: 'Presença equilibrada para apresentações, resumos e locuções neutras.',
   },
+  {
+    id: 'Umbriel',
+    label: 'Umbriel',
+    desc: 'Tom denso e investigativo, perfeito para mistérios e revelações de arquivos confidenciais.', // Ajuste a descrição como preferir
+  },
 ];

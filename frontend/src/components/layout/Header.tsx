@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CheckCircle2, KeyRound, Languages, Mic2, Settings2 } from 'lucide-react';
+import { CheckCircle2, KeyRound, Languages, Mic2, Settings2, Wand2 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 
 interface HeaderProps {
@@ -11,9 +11,15 @@ export function Header({ authenticated }: HeaderProps) {
   const hasAudio = useAppStore((state) => Boolean(state.generatedAudio));
   const language = useAppStore((state) => state.language);
   const setLanguage = useAppStore((state) => state.setLanguage);
+  const videoStyle = useAppStore((state) => state.videoStyle);
+  const setVideoStyle = useAppStore((state) => state.setVideoStyle);
 
   function toggleLanguage() {
     setLanguage(language === 'pt' ? 'en' : 'pt');
+  }
+
+  function toggleVideoStyle() {
+    setVideoStyle(videoStyle === 'cinematic' ? 'stickfigure' : 'cinematic');
   }
 
   return (
@@ -48,6 +54,20 @@ export function Header({ authenticated }: HeaderProps) {
           <Languages className="h-4 w-4" />
           <span className="font-semibold tracking-wide">
             {language === 'pt' ? 'PT' : 'EN'}
+          </span>
+        </button>
+
+        {/* Video style toggle */}
+        <button
+          id="header-style-toggle"
+          type="button"
+          onClick={toggleVideoStyle}
+          title={videoStyle === 'cinematic' ? 'Mudar para Stick Figure' : 'Mudar para Cinemático'}
+          className="inline-flex items-center gap-2 rounded-full border border-[var(--border2)] bg-[var(--bg2)] px-4 py-2 text-[var(--text2)] transition hover:border-[var(--amber)] hover:text-[var(--amber)]"
+        >
+          <Wand2 className="h-4 w-4" />
+          <span className="font-semibold tracking-wide">
+            {videoStyle === 'cinematic' ? 'Cinemático' : 'Stick Figure'}
           </span>
         </button>
 

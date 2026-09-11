@@ -6,12 +6,14 @@ class EnhanceRequest(BaseModel):
     text: str = Field(min_length=1)
     language: str = "pt"
     generate_image_prompts: bool = False
+    style: str = "cinematic"
 
 
 class ScriptPromptItem(BaseModel):
     timestamp: str = "00:00"
     cue: str = ""
     prompt: str
+    video_prompt: str = ""
 
 
 class EnhanceResponse(BaseModel):
@@ -34,6 +36,7 @@ class GenerateScriptRequest(BaseModel):
     api_key: str | None = None
     url: HttpUrl
     language: str = "pt"
+    style: str = "cinematic"
 
 
 class GenerateScriptResponse(BaseModel):

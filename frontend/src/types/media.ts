@@ -1,7 +1,10 @@
+export type VideoStyle = 'cinematic' | 'stickfigure';
+
 export interface EnhanceRequest {
   text: string;
   language?: string;
   generate_image_prompts?: boolean;
+  style?: VideoStyle;
 }
 
 export interface EnhanceResponse {
@@ -12,12 +15,14 @@ export interface EnhanceResponse {
 export interface GenerateScriptRequest {
   url: string;
   language?: string;
+  style?: VideoStyle;
 }
 
 export interface ScriptPromptItem {
   timestamp: string;
   cue: string;
   prompt: string;
+  video_prompt?: string;
 }
 
 export interface GenerateScriptResponse {
